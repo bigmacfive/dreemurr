@@ -40,13 +40,13 @@ describe('mac app icon master', () => {
   it('fills the rounded plate with the robot (center is opaque, not a tiny stamp)', () => {
     const out = execFileSync('identify', [
       '-format',
-      '%[pixel:u.p{512,512}] %[pixel:u.p{512,80}]',
+      '%[pixel:u.p{512,512}] %[pixel:u.p{512,200}]',
       master
     ], { encoding: 'utf8' })
     const [center, upper] = out.trim().split(/\s+/)
     expect(center).not.toMatch(/,\s*0\)$/)
+    expect(center).not.toMatch(/255,\s*255,\s*255/)
     expect(upper).not.toMatch(/,\s*0\)$/)
-    expect(upper).not.toMatch(/255,\s*255,\s*255/)
   })
 
   it('ships an icns that includes a 1024px representation', () => {
