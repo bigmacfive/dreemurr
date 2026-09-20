@@ -24,10 +24,10 @@ describe('mac app icon master', () => {
     expect(height).toBe(1024)
   })
 
-  it('uses a rounded plate: extreme corners are transparent', () => {
+  it('uses a rounded plate: canvas corners stay transparent (Apple 824-on-1024 grid)', () => {
     const out = execFileSync('identify', [
       '-format',
-      '%[pixel:u.p{0,0}] %[pixel:u.p{1023,0}] %[pixel:u.p{0,1023}] %[pixel:u.p{1023,1023}] %[pixel:u.p{20,20}]',
+      '%[pixel:u.p{0,0}] %[pixel:u.p{1023,0}] %[pixel:u.p{0,1023}] %[pixel:u.p{1023,1023}] %[pixel:u.p{50,50}]',
       master
     ], { encoding: 'utf8' })
     const pixels = out.trim().split(/\s+/)
@@ -37,7 +37,7 @@ describe('mac app icon master', () => {
     }
   })
 
-  it('fills the rounded plate with the robot (center is opaque, not a tiny stamp)', () => {
+  it('fills the inset plate with the robot (center is the mark, not empty white)', () => {
     const out = execFileSync('identify', [
       '-format',
       '%[pixel:u.p{512,512}] %[pixel:u.p{512,200}]',
