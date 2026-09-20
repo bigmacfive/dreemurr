@@ -212,17 +212,20 @@ html
   font-family var(--sans-serif-font)
   letter-spacing -0.03em
   &.is-tauri
+    background var(--primary-background)
+    body
+      overflow auto
+    .window-frame.desktop
+      background var(--primary-background)
+      min-height 100%
+  &.is-tauri-mac
     --titlebar-height 28px
     background transparent
     clip-path inset(0 round 10px)
     body
       background transparent
-      overflow auto
     #app
       background transparent
-    .window-frame.desktop
-      background var(--primary-background)
-      min-height 100%
     header
       top var(--titlebar-height)
       padding 6px 10px 4px

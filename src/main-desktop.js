@@ -13,6 +13,7 @@ import './assets/page.styl'
 
 if (window.__TAURI_INTERNALS__ || window.__TAURI__) {
   document.documentElement.classList.add('is-tauri')
+  document.documentElement.classList.add(/Mac/i.test(navigator.userAgent) ? 'is-tauri-mac' : 'is-tauri-win')
 }
 
 const app = createApp(App)

@@ -1,6 +1,6 @@
 # dreemurr
 
-A local-first spatial canvas for macOS.
+A local-first spatial canvas for macOS and Windows.
 
 Drop cards anywhere. Connect them. Group them into boxes. Your boards live on disk as `.dreem` files in `~/Documents/dreemurr` — not in a cloud account.
 
@@ -10,11 +10,10 @@ Drop cards anywhere. Connect them. Group them into boxes. Your boards live on di
 
 ## Install
 
-Grab the latest **macOS `.dmg`** from [Releases](https://github.com/bigmacfive/dreemurr/releases).
+Grab a build from [Releases](https://github.com/bigmacfive/dreemurr/releases) or the latest [Actions](https://github.com/bigmacfive/dreemurr/actions) artifacts.
 
-Open it, drag **dreemurr** into **Applications**, then launch from Spotlight or the Dock.
-
-> Apple Silicon (aarch64). Unsigned local build — macOS may ask you to allow it under System Settings → Privacy & Security.
+- **macOS:** `.dmg` — drag **dreemurr** into Applications. Unsigned; allow it under System Settings → Privacy & Security if Gatekeeper complains.
+- **Windows:** `.exe` NSIS installer from the `dreemurr-windows` artifact. Spaces go in `%USERPROFILE%\Documents\dreemurr`.
 
 ## What it is
 
@@ -22,9 +21,9 @@ Open it, drag **dreemurr** into **Applications**, then launch from Spotlight or 
 - Multiple spaces, search, tags, and tasks
 - JSON / `.dreem` import and export
 - URL previews and YouTube embeds without a Kinopio account
-- Two-finger trackpad pan, native traffic lights, overlay titlebar
+- Trackpad / scroll pan, local `.dreem` files, desktop window chrome
 
-Based on [Kinopio](https://kinopio.club). This fork is a Mac-only local app, not the hosted product.
+Based on [Kinopio](https://kinopio.club). This is a desktop fork, not the hosted product.
 
 ## Develop
 
@@ -37,10 +36,10 @@ npm run desktop
 
 ```bash
 npm run test
-npm run desktop:build   # dreemurr.app + .dmg
+npm run desktop:build   # macOS .app/.dmg or Windows NSIS, depending on host
 ```
 
-Spaces are stored at `~/Documents/dreemurr/*.dreem`. Every valid file in that folder appears in the in-app space list.
+Spaces are stored at `~/Documents/dreemurr/*.dreem` (Windows: `%USERPROFILE%\Documents\dreemurr`). Every valid file in that folder appears in the in-app space list.
 
 ## License
 

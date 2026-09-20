@@ -21,19 +21,17 @@
         "visible": true,
         "focus": true,
         "center": true,
-        "decorations": false,
-        "transparent": true,
-        "shadow": false
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {
       "csp": null
-    },
-    "macOSPrivateApi": true
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
