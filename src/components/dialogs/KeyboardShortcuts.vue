@@ -208,12 +208,6 @@ dialog.keyboard-shortcuts.wide(v-if="visible" :open="visible" @click.left.stop r
       article
         .row
           .badge.title
-            img.icon.presentation(src="@/assets/presentation.svg")
-            span Presentation Mode
-          .badge.keyboard-shortcut P
-      article
-        .row
-          .badge.title
             img.icon.hand(src="@/assets/hand.svg")
             span Drag to Pan
           .badge.keyboard-shortcut Space/Right-Click Drag
@@ -489,10 +483,6 @@ dialog.keyboard-shortcuts
 
   .inbox-icon
     margin 0
-
-  .icon.presentation
-    width 12px
-    vertical-align -1px
 
   .checkbox-wrap
     display inline-block

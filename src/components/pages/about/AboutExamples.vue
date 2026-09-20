@@ -118,7 +118,7 @@ section.examples(ref="parentElement")
     .example.mindmap(v-show="state.example === 'mindmap'")
       video(autoplay loop muted playsinline aria-label="mindmap space")
         source(src="https://updates.kinopio.club/pages/about/examples/mindmap.webm")
-      p Unlike traditional mind maps and outliners, Kinopio lets you make your spaces truly yours with backgrounds, images, GIFs, MP3s, Youtube or Spotify URLs.
+      p Unlike traditional mind maps and outliners, dreemurr lets you make your spaces truly yours with backgrounds, images, GIFs, MP3s, Youtube or Spotify URLs.
       p Draw anywhere to decorate or emphasize specific areas.
 
     .example.moodboard(v-show="state.example === 'moodboard'")
@@ -149,8 +149,8 @@ section.examples(ref="parentElement")
     .example.notes(v-show="state.example === 'notes'")
       video(autoplay loop muted playsinline aria-label="note-taking space")
         source(src="https://updates.kinopio.club/pages/about/examples/notes.webm")
-      p Note taking in Kinopio is an effective way to build spatial memory that sticks with you. Spatial memory is the magic that makes big ideas easier to recall and reason about.
-      p Browser extensions let you quick capture ideas and URLs. If you can see it on the internet, you can put it inside Kinopio.
+      p Note taking in dreemurr is an effective way to build spatial memory that sticks with you. Spatial memory is the magic that makes big ideas easier to recall and reason about.
+      p Browser extensions let you quick capture ideas and URLs. If you can see it on the internet, you can put it inside dreemurr.
 
     .example.websites(v-show="state.example === 'websites'")
       img(src="https://updates.kinopio.club/pages/about/examples/websites.webp" alt="website space")

@@ -7,8 +7,8 @@ const props = defineProps({
 
 <template lang="pug">
 .row.wordmark
-  h1.name(v-if="props.isH1") KINOPIO
-  .name(v-else) KINOPIO
+  h1.name(v-if="props.isH1") DREEMURR
+  .name(v-else) DREEMURR
 
   h2(v-if="props.h2") {{ props.h2 }}
 </template>

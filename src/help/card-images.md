@@ -27,7 +27,7 @@ To keep costs sustainable, free users can upload files up to 5mb, upgraded users
 
 In desktop browsers you can get the URL of an image on another site by right clicking and selecting `Copy Image Address`. On mobile, you can usually get an image URL by long pressing it and selecting the copy URL command.
 
-Kinopio requires image URLs to specify image file extensions like `https://space.com/image.jpg`.  `jpeg`, `jpg`, `png`, `webp`, and `gif` format images are supported.
+dreemurr requires image URLs to specify image file extensions like `https://space.com/image.jpg`.  `jpeg`, `jpg`, `png`, `webp`, and `gif` format images are supported.
 
 Some websites obscure their image URLs to not include the file extension `https://space.com/maybe-an-image`. These will only display as links in cards.
 

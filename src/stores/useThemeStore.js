@@ -28,7 +28,7 @@ const themes = {
       'danger-background': '#ffb8b3',
       'danger-hover-background': '#ffa49e',
       'danger-active-background': '#ff928b',
-      'info-background': '#90ffff',
+      'info-background': '#FFD4A8',
       'success-background': '#67ffbb',
       'search-background': 'yellow',
       'new-unread-background': '#57a8ff',
@@ -43,7 +43,7 @@ const themes = {
       'code-keyword': '#00119e',
       // user badges
       'badge-donor': '#ff9dff',
-      'badge-upgraded': 'springgreen',
+      'badge-upgraded': '#E85D04',
       // /about page sections
       'example-background': '#889e9a'
     }
@@ -66,7 +66,7 @@ const themes = {
       'danger-background': '#732b26',
       'danger-hover-background': '#8f3832',
       'danger-active-background': '#a83730',
-      'info-background': '#085353',
+      'info-background': '#7A3A12',
       'success-background': '#183f24',
       'search-background': '#6f6d01',
       'new-unread-background': '#2f6fb5',
@@ -96,21 +96,10 @@ export const useThemeStore = defineStore('theme', {
   }),
   getters: {
     getIsThemeDark () {
-      const userStore = useUserStore()
-      if (userStore.themeIsSystem) {
-        return this.systemTheme === 'dark'
-      } else {
-        return userStore.theme === 'dark'
-      }
+      return false
     },
     getThemeName () {
-      const isThemeDark = this.getIsThemeDark
-      let themeName
-      if (isThemeDark) {
-        return 'dark'
-      } else {
-        return 'light'
-      }
+      return 'light'
     },
     getThemeColors () {
       const themeName = this.getThemeName
@@ -120,12 +109,7 @@ export const useThemeStore = defineStore('theme', {
 
   actions: {
     updateSystemTheme () {
-      const isDarkModeOS = window.matchMedia('(prefers-color-scheme: dark)').matches
-      if (isDarkModeOS) {
-        this.systemTheme = 'dark'
-      } else {
-        this.systemTheme = 'light'
-      }
+      this.systemTheme = 'light'
       this.restoreTheme()
     },
     isCardColorThemeDefault (color) {
@@ -137,57 +121,34 @@ export const useThemeStore = defineStore('theme', {
 
     // theme is system
 
-    updateThemeIsSystem (value) {
-      const globalStore = useGlobalStore()
+    updateThemeIsSystem () {
       const userStore = useUserStore()
-      userStore.updateUser({ themeIsSystem: value })
-      globalStore.triggerUpdateTheme()
+      userStore.updateUser({ themeIsSystem: false, theme: 'light' })
+      this.updateTheme('light')
     },
     toggleThemeIsSystem () {
-      const userStore = useUserStore()
-      const value = !userStore.themeIsSystem
-      this.updateThemeIsSystem(value)
-      if (value) {
-        const themeName = this.systemTheme
-        this.updateTheme(themeName)
-      }
+      this.updateThemeIsSystem()
     },
 
     // update
 
     toggleTheme () {
-      const userStore = useUserStore()
-      const prevTheme = userStore.theme || 'light'
-      let theme
-      if (prevTheme === 'light') {
-        theme = 'dark'
-      } else {
-        theme = 'light'
-      }
-      this.updateTheme(theme)
+      this.updateTheme('light')
     },
-    updateTheme (themeName) {
+    updateTheme () {
       const globalStore = useGlobalStore()
       const userStore = useUserStore()
-      const normalizedThemeName = themeName || 'light'
-      // colors
-      const theme = themes[normalizedThemeName]
+      const theme = themes.light
       const colors = theme.colors
       const keys = Object.keys(colors)
       keys.forEach(key => {
         utils.setCssVariable(key, colors[key])
       })
-      userStore.updateUser({ theme: normalizedThemeName })
+      userStore.updateUser({ theme: 'light', themeIsSystem: false })
       globalStore.triggerUpdateTheme()
     },
     restoreTheme () {
-      const userStore = useUserStore()
-      let themeName = userStore.theme
-      const themeIsSystem = userStore.themeIsSystem
-      if (themeIsSystem) {
-        themeName = this.systemTheme || themeName
-      }
-      this.updateTheme(themeName)
+      this.updateTheme('light')
     },
 
     // preview image
@@ -223,9 +184,9 @@ export const useThemeStore = defineStore('theme', {
 
     randomColor () {
       const isDarkTheme = this.getIsThemeDark
-      let color = randomColor({ luminosity: 'light' })
+      let color = randomColor({ luminosity: 'light', hue: 'orange' })
       if (isDarkTheme) {
-        color = randomColor({ luminosity: 'dark' })
+        color = randomColor({ luminosity: 'dark', hue: 'orange' })
       }
       return color
     }

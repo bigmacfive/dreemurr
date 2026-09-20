@@ -24,7 +24,6 @@ import Loader from '@/components/Loader.vue'
 import UrlPreview from '@/components/UrlPreview.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import CardCollaborationInfo from '@/components/CardCollaborationInfo.vue'
-import ShareItem from '@/components/dialogs/ShareItem.vue'
 import OtherCardPreview from '@/components/OtherCardPreview.vue'
 import OtherSpacePreview from '@/components/OtherSpacePreview.vue'
 import GroupInvitePreview from '@/components/GroupInvitePreview.vue'
@@ -149,8 +148,7 @@ const state = reactive({
   openingAlpha: 0,
   previousSelectedTag: {},
   currentSearchTag: {},
-  newTagColor: '',
-  shareItemIsVisible: false
+  newTagColor: ''
 })
 
 const cardId = computed(() => globalStore.cardDetailsIsVisibleForCardId)
@@ -184,7 +182,6 @@ const closeDialogs = (shouldSkipGlobalDialogs) => {
   globalStore.triggerCloseChildDialogs()
   state.imagePickerIsVisible = false
   state.cardTipsIsVisible = false
-  state.shareItemIsVisible = false
   hidePickers()
   if (shouldSkipGlobalDialogs === true) { return }
   hideTagDetailsIsVisible()
@@ -361,12 +358,6 @@ const toggleShouldShowItemActions = async () => {
   await nextTick()
   scrollIntoView()
 }
-const toggleShareItemIsVisible = (event) => {
-  const isVisible = state.shareItemIsVisible
-  closeDialogs()
-  state.shareItemIsVisible = !isVisible
-  copyCardUrl(event)
-}
 const scrollIntoView = async (behavior) => {
   // wait for element to be rendered before getting position
   await nextTick()
@@ -418,30 +409,6 @@ const closeCard = async () => {
   const tags = spaceStore.getSpaceTagsInCard(item)
   if (tags.length) {
     await apiStore.addToQueue({ name: 'updateTags', body: { tags } })
-  }
-}
-
-// share url
-
-const cardUrl = () => {
-  const domain = consts.kinopioDomain()
-  const url = `${domain}/${card.value.spaceId}/${card.value.id}`
-  console.info('🍇 card url', url)
-  return url
-}
-const copyCardUrl = async (event) => {
-  if (!state.shareItemIsVisible) { return }
-  const canShare = spaceStore.getSpaceIsRemote
-  if (!canShare) { return }
-  globalStore.clearNotificationsWithPosition()
-  const position = utils.cursorPositionInPage(event)
-  const url = cardUrl()
-  try {
-    await navigator.clipboard.writeText(url)
-    globalStore.addNotificationWithPosition({ message: 'Copied Link', position, type: 'success', layer: 'app', icon: 'checkmark' })
-  } catch (error) {
-    console.warn('🚑 copyText', error)
-    globalStore.addNotificationWithPosition({ message: 'Copy Error', position, type: 'danger', layer: 'app', icon: 'cancel' })
   }
 }
 
@@ -1293,6 +1260,7 @@ const handleEnterKey = (event) => {
 }
 // 🎹 ctrl-enter, alt-enter
 const handleOptionEnterKey = (event) => {
+  if (utils.isCompositionKeyboardEvent(event)) { return }
   const optionEnterChildCard = !userStore.cardSettingsShiftEnterShouldAddChildCard
   if (optionEnterChildCard) {
     globalStore.triggerAddChildCard()
@@ -1302,6 +1270,7 @@ const handleOptionEnterKey = (event) => {
 }
 // 🎹 shift-enter
 const handleShiftEnterKey = (event) => {
+  if (utils.isCompositionKeyboardEvent(event)) { return }
   const shiftEnterChildCard = userStore.cardSettingsShiftEnterShouldAddChildCard
   if (shiftEnterChildCard) {
     globalStore.triggerAddChildCard()
@@ -1712,11 +1681,6 @@ dialog.card-details(v-if="visible" :open="visible" ref="dialogElement" @click.le
           .button-wrap
             button(@click.left.stop="toggleShouldShowItemActions" :class="{active : shouldShowItemActions}" title="More Options")
               img.icon.down-arrow.button-down-arrow(src="@/assets/down-arrow.svg")
-        //- Share
-        .button-wrap.share-button-wrap(v-if="name" @click.left.stop="toggleShareItemIsVisible" )
-          button(:class="{active: state.shareItemIsVisible}")
-            span Share
-          ShareItem(:visible="state.shareItemIsVisible" :item="card" type="card" :isReadOnly="!canEditCard")
 
       CardActions(:visible="shouldShowItemActions && canEditCard" :cards="[card]" @closeDialogs="closeDialogs" :class="{ 'last-row': !rowIsBelowItemActions }" :tagsInCard="tagsInCard" :backgroundColorIsFromTheme="true")
       CardCollaborationInfo(:visible="shouldShowItemActions || isComment || isAtMentions" :createdByUser="createdByUser" :updatedByUser="updatedByUser" :card="card" :parentElement="parentElement" @closeDialogs="closeDialogs" :isComment="isComment")

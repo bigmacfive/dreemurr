@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 import { useGlobalStore } from '@/stores/useGlobalStore'
 
@@ -107,7 +106,6 @@ export const useLineStore = defineStore('lines', {
     },
     async createLine (line = {}) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const broadcastStore = useBroadcastStore()
       if (!userStore.getUserIsSpaceMember) { return }
@@ -120,7 +118,6 @@ export const useLineStore = defineStore('lines', {
       })
       if (line.isFromBroadcast) { return }
       broadcastStore.update({ updates: line, store: 'lineStore', action: 'addLineToState' })
-      await apiStore.addToQueue({ name: 'createLine', body: line })
     },
 
     // update
@@ -134,16 +131,12 @@ export const useLineStore = defineStore('lines', {
       })
     },
     async updateLines (updates) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
       if (!userStore.getUserCanEditSpace) { return }
       this.updateLinesState(updates)
       broadcastStore.update({ updates, store: 'lineStore', action: 'updateLinesState' })
-      for (const line of updates) {
-        await apiStore.addToQueue({ name: 'updateLine', body: line })
-      }
       await cache.updateSpace('lines', this.getAllLines, spaceStore.id)
     },
     updateLine (update) {
@@ -196,7 +189,6 @@ export const useLineStore = defineStore('lines', {
       }
     },
     async removeLines (ids = []) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
@@ -204,7 +196,6 @@ export const useLineStore = defineStore('lines', {
       if (!canEditSpace) { return }
       for (const id of ids) {
         const line = this.getLine(id)
-        await apiStore.addToQueue({ name: 'removeLine', body: line })
       }
       this.removeLinesFromState(ids)
       broadcastStore.update({ updates: ids, store: 'lineStore', action: 'removeLinesFromState' })

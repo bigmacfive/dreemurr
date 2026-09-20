@@ -83,8 +83,8 @@ onMounted(async () => {
   if (shouldFocus) {
     globalStore.updateFocusOnItemId(props.card.id)
   }
-  await updateUrlPreviewOnload()
   updateUrls()
+  await updateUrlPreviewOnload()
   checkIfShouldUpdateIframeUrl()
   initViewportObserver()
 })
@@ -813,6 +813,9 @@ const pendingUploadDataUrl = computed(() => {
     return null
   }
 })
+const pendingUploadIsGif = computed(() => {
+  return Boolean(cardPendingUpload.value?.isGif || uploadStore.getSessionUploadByItemId(props.card.id)?.isGif)
+})
 const selectedColorUpload = computed(() => {
   const color = currentUserColor.value
   if (state.uploadIsDraggedOver) {
@@ -890,11 +893,6 @@ const uploadFile = async (event) => {
   removeUploadIsDraggedOver()
   cardStore.incrementCardZ(props.card.id)
   // pre-upload errors
-  if (!currentUserIsSignedIn.value) {
-    state.error.signUpToUpload = true
-    globalStore.addNotification({ message: 'To upload files, you need to Sign Up or In', type: 'info' })
-    return
-  }
   if (!canEditSpace.value) {
     state.error.spaceIsReadOnly = true
     globalStore.addNotification({ message: 'You can only upload files on spaces you can edit', type: 'info' })
@@ -1090,7 +1088,6 @@ const isLoadingUrlPreview = computed(() => {
   return Boolean(isLoading)
 })
 const updateUrlPreviewOnload = async () => {
-  if (!props.card.shouldUpdateUrlPreview) { return }
   updateMediaUrls()
   const isUpdatedSuccess = await updateUrlPreview()
   const update = {
@@ -1104,22 +1101,15 @@ const updateUrlPreviewOnload = async () => {
 }
 const preventUpdatePrevPreview = computed(() => {
   if (props.card.shouldUpdateUrlPreview) { return }
+  const hasPreview = Boolean(props.card.urlPreviewTitle || props.card.urlPreviewImage)
+  if (!hasPreview) { return false }
   const updateDelta = dayjs(updatedAt.value).diff(state.sessionStartDate, 'second')
   return updateDelta < 0
 })
 const updateUrlPreview = () => {
   if (globalStore.isLoadingUrlPreview) { return }
-  const isOffline = !globalStore.isOnline
   if (preventUpdatePrevPreview.value) { return }
-  if (isOffline) {
-    const update = {
-      id: props.card.id,
-      shouldUpdateUrlPreview: true
-    }
-    cardStore.updateCard(update)
-  } else {
-    updateUrlPreviewOnline()
-  }
+  updateUrlPreviewOnline()
 }
 const updateUrlPreviewOnline = async () => {
   globalStore.addUrlPreviewLoadingForCardIds(props.card.id)
@@ -1171,11 +1161,11 @@ const retryUrlPreview = () => {
 const shouldUpdateUrlPreview = (url) => {
   if (props.card.shouldUpdateUrlPreview) { return true }
   const previewIsVisible = props.card.urlPreviewIsVisible
-  const isNotPreviewUrl = url !== props.card.urlPreviewUrl
-  const isNotErrorUrl = url !== props.card.urlPreviewErrorUrl
+  const hasPreview = Boolean(props.card.urlPreviewTitle || props.card.urlPreviewImage)
+  const isSameSuccessfulPreview = url === props.card.urlPreviewUrl && hasPreview
   const isNotKinopioUrl = !url.startsWith('https://kinopio.club')
   const isLocalhostUrl = url.match(utils.localhostUrlPattern())
-  return previewIsVisible && isNotPreviewUrl && isNotErrorUrl && isNotKinopioUrl && !isLocalhostUrl
+  return previewIsVisible && !isSameSuccessfulPreview && isNotKinopioUrl && !isLocalhostUrl
 }
 const nameIncludesUrl = (url) => {
   const name = props.card.name
@@ -1942,6 +1932,7 @@ const toggleVideoIsPaused = () => {
       ImageOrVideo(
         :isSelectedOrDragging="isSelectedOrDragging"
         :pendingUploadDataUrl="pendingUploadDataUrl"
+        :pendingUploadIsGif="pendingUploadIsGif"
         :image="state.formats.image"
         :video="state.formats.video"
         :videoIsPaused="props.card.videoIsPaused"

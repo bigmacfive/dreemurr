@@ -105,8 +105,7 @@ dialog.narrow.update-email(v-if="props.visible" :open="props.visible" @click.lef
     p Account
   template(v-if="!currentUserIsSignedIn")
     section
-      p After you sign up you'll be able to update your email address here
-      button(@click.left="triggerSignUpOrInIsVisible") Sign Up or In
+      p This local copy keeps your account on this Mac only. There is no sign-up.
   template(v-else)
     section
       form(@submit.prevent="updateEmail")

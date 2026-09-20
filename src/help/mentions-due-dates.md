@@ -51,4 +51,4 @@ Bring it all together by combining [checkboxes](/help/checkbox-cards/) and [tags
 
 <img src="https://updates.kinopio.club/pages/help/posts/mentions/combined.webp" class="">
 
-> To keep Kinopio safe, only signed in users can @mention
+> To keep dreemurr safe, only signed in users can @mention

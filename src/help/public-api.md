@@ -1,6 +1,6 @@
 ---
 title: Public API
-description: The Kinopio API is used to find, save, and update the spaces of signed up users
+description: The dreemurr API is used to find, save, and update the spaces of signed up users
 category: Importing and Exporting
 updated: 2026-09-10
 image: ''
@@ -8,7 +8,7 @@ image: ''
 
 # Public API
 
-The Kinopio API is used to find, save, and update the spaces of signed up users. Basically, almost anything you can do in the Kinopio UI, you're also able to do programmatically through the API. You can use it to make your own integrations and tools.
+The dreemurr API is used to find, save, and update the spaces of signed up users. Basically, almost anything you can do in the dreemurr UI, you're also able to do programmatically through the API. You can use it to make your own integrations and tools.
 
 All routes, attributes and how to authenticate can be found in the [API Docs](/api).
 

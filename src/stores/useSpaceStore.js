@@ -7,7 +7,6 @@ import { useBoxStore } from '@/stores/useBoxStore'
 import { useLineStore } from '@/stores/useLineStore'
 import { useListStore } from '@/stores/useListStore'
 import { useThemeStore } from '@/stores/useThemeStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useGroupStore } from '@/stores/useGroupStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 import { useHistoryStore } from '@/stores/useHistoryStore'
@@ -20,6 +19,7 @@ import newSpace from '@/data/new.json'
 import utils from '@/utils.js'
 import cache from '@/cache.js'
 import consts from '@/consts.js'
+import { resolveSpaceToLoad } from '@/desktop/dreemFiles.js'
 import postMessage from '@/postMessage.js'
 
 import { nanoid } from 'nanoid'
@@ -94,10 +94,7 @@ export const useSpaceStore = defineStore('space', {
       return cardsCreatedIsOverLimit && !this.getSpaceCreatorIsUpgraded
     },
     getSpaceIsRemote () {
-      const userStore = useUserStore()
-      const isSpaceMember = userStore.getUserIsSpaceMember
-      const isSignedIn = userStore.getUserIsSignedIn
-      return !isSpaceMember || isSignedIn
+      return false
     },
     getSpaceAllUsers () {
       const userStore = useUserStore()
@@ -322,7 +319,6 @@ export const useSpaceStore = defineStore('space', {
     async initializeSpace () {
       const globalStore = useGlobalStore()
       const userStore = useUserStore()
-      const broadcastStore = useBroadcastStore()
       globalStore.isLoadingSpace = true
       globalStore.isSpacePage = true
       const spaceUrl = globalStore.spaceUrlToLoad
@@ -352,15 +348,12 @@ export const useSpaceStore = defineStore('space', {
         const space = cachedSpaces[0]
         console.log('🚃 Restore space from cache', space)
         await this.loadSpace(space)
-      // hello kinopio
       } else {
-        console.info('🚃 Create and restore hello space')
-        shouldLoadNewHelloSpace = true
+        console.info('🚃 Create new local space')
+        await this.createSpace()
       }
-      await this.checkIfShouldCreateNewUserSpaces()
       globalStore.triggerUpdateWindowHistory()
       globalStore.isLoadingSpace = false
-      broadcastStore.connect()
     },
 
     // load
@@ -398,30 +391,7 @@ export const useSpaceStore = defineStore('space', {
       globalStore.updatePageSizes()
     },
     async getRemoteSpace (space) {
-      const userStore = useUserStore()
-      const apiStore = useApiStore()
-      const globalStore = useGlobalStore()
-      const collaboratorKey = globalStore.spaceCollaboratorKeys.find(key => key.spaceId === space.id)
-      if (collaboratorKey) {
-        space.collaboratorKey = collaboratorKey.collaboratorKey
-      }
-      let remoteSpace
-      try {
-        if (userStore.getUserIsSignedIn) {
-          remoteSpace = await apiStore.getSpace({ space })
-        } else if (collaboratorKey) {
-          space.collaboratorKey = collaboratorKey
-          remoteSpace = await apiStore.getSpaceAnonymously(space)
-          await cache.saveInvitedSpace(remoteSpace)
-          globalStore.clearSpaceCollaboratorKeys()
-        } else if (this.getSpaceIsRemote) {
-          remoteSpace = await apiStore.getSpaceAnonymously(space)
-        }
-        return remoteSpace
-      } catch (error) {
-        console.error('🚒 getRemoteSpace', space.id, space, error)
-        throw error
-      }
+
     },
     async loadRemoteSpace (space) {
       const globalStore = useGlobalStore()
@@ -519,7 +489,6 @@ export const useSpaceStore = defineStore('space', {
     },
     async loadSpace (space) {
       const globalStore = useGlobalStore()
-      const groupStore = useGroupStore()
       const cardStore = useCardStore()
       isLoadingRemoteSpace = false
       space = utils.migrateConnectionTypes(space)
@@ -528,29 +497,14 @@ export const useSpaceStore = defineStore('space', {
         globalStore.spaceZoomOffset = { x: 0, y: 0 }
       }
       globalStore.isAddPage = false
-      const cachedSpace = await cache.space(space.id) || space
-      cachedSpace.id = cachedSpace.id || space.id
-      space = utils.normalizeSpace(cachedSpace)
+      const cachedSpace = await cache.space(space.id)
+      const resolvedSpace = resolveSpaceToLoad(space, cachedSpace)
+      resolvedSpace.id = resolvedSpace.id || space.id
+      space = utils.normalizeSpace(resolvedSpace)
       globalStore.resetStateMeta()
       globalStore.resetPageSizes()
-      // load local space while fetching remote space
       try {
-        const [localData, remoteData] = await Promise.all([
-          this.restoreSpaceLocal(space),
-          this.loadRemoteSpace(space)
-        ])
-        // restore remote space
-        const remoteSpace = remoteData
-        console.info('🎑 remoteSpace', remoteSpace)
-        if (!remoteSpace) {
-          globalStore.triggerDrawingInitialize()
-          return
-        }
-        globalStore.triggerUpdateWindowTitle()
-        groupStore.loadGroup(remoteSpace)
-        this.updateSpacePreviewImage()
-        // space
-        await this.restoreSpaceRemote(remoteSpace)
+        this.restoreSpaceLocal(space)
         this.saveSpaceToCache()
         this.notifySpaceIsOpen()
         this.updateUserLastSpaceId()
@@ -558,9 +512,8 @@ export const useSpaceStore = defineStore('space', {
         globalStore.isLoadingSpace = false
         globalStore.triggerDrawingInitialize()
         globalStore.updateTags()
-        this.updateOtherUsers()
       } catch (error) {
-        console.error('🚒 Error fetching remoteSpace', error)
+        console.error('🚒 Error restoring local space', error)
       }
       globalStore.updateCurrentSpaceIsUnavailableOffline(space.id)
       globalStore.updateCurrentUserIsInvitedButCannotEditCurrentSpace(space)
@@ -572,29 +525,11 @@ export const useSpaceStore = defineStore('space', {
       cardStore.alignLeftAddedCardsInInbox()
     },
     async restoreCurrentSpaceFromRemote () {
-      const globalStore = useGlobalStore()
-      try {
-        globalStore.notifySpaceOutOfSync = true
-        globalStore.isLoadingSpace = true
-        const remoteSpace = await this.loadRemoteSpace({ id: this.id })
-        await this.restoreSpaceRemote(remoteSpace)
-        globalStore.triggerDrawingInitialize()
-        this.saveSpaceToCache()
-        globalStore.isLoadingSpace = false
-        globalStore.notifySpaceOutOfSync = false
-      } catch (error) {
-        console.error('🚒 Error fetching remoteSpace', error)
-      }
+
     },
     async loadInboxSpace () {
-      const apiStore = useApiStore()
       try {
-        // get inbox
-        let space = await cache.getInboxSpace()
-        if (!space) {
-          space = await apiStore.getInboxSpace()
-        }
-        // load or create
+        const space = await cache.getInboxSpace()
         if (space) {
           await this.loadSpace(space)
         } else {
@@ -634,7 +569,6 @@ export const useSpaceStore = defineStore('space', {
     async changeSpace (space) {
       try {
         const globalStore = useGlobalStore()
-        const apiStore = useApiStore()
         const userStore = useUserStore()
         if (!globalStore.isSpacePage) {
           window.location = utils.urlFromSpaceAndItem({ spaceId: space.id })
@@ -659,10 +593,6 @@ export const useSpaceStore = defineStore('space', {
         }
         globalStore.restoreMultipleSelectedItemsToLoad()
         const body = { id: space.id, updatedAt: new Date() }
-        await apiStore.addToQueue({
-          name: 'updateSpace',
-          body
-        })
         await cache.updateSpace('updatedAt', body.updatedAt, space.id)
       } catch (error) {
         console.error('🚒 changeSpace', error)
@@ -673,7 +603,6 @@ export const useSpaceStore = defineStore('space', {
 
     async saveSpace () {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const space = this.getSpaceAllState
       const user = userStore.getUserAllState
@@ -684,10 +613,6 @@ export const useSpaceStore = defineStore('space', {
       globalStore.isLoadingSpace = false
       globalStore.triggerUpdateWindowHistory()
       globalStore.triggerDrawingInitialize()
-      await apiStore.addToQueue({
-        name: 'createSpace',
-        body: space
-      })
     },
     saveSpaceToCache () {
       const userStore = useUserStore()
@@ -700,10 +625,7 @@ export const useSpaceStore = defineStore('space', {
     // create
 
     async restoreRemovedSpace (space) {
-      const apiStore = useApiStore()
       await cache.restoreRemovedSpace(space)
-      const restoredSpace = await apiStore.restoreRemovedSpace(space)
-      space = restoredSpace || space
       this.incrementCardsCreatedCountFromSpace(space)
       this.changeSpace(space)
     },
@@ -777,15 +699,14 @@ export const useSpaceStore = defineStore('space', {
       }
       const shouldHideDateCards = userStore.shouldHideDateCards
       if (!shouldHideDateCards) {
-        const date = dayjs().format('ddd').toUpperCase() // SUN
         const dateCard = {
           id: nanoid(),
           x: 82,
           y: 125,
           z: 0,
-          name: `${date} ${globalStore.getDateImageUrl}`,
+          name: `yarr ${globalStore.getDateImageUrl}`,
           width: 94,
-          height: 94,
+          height: 140,
           resizeWidth: 94
         }
         space.cards.push(dateCard)
@@ -818,7 +739,6 @@ export const useSpaceStore = defineStore('space', {
       const globalStore = useGlobalStore()
       const userStore = useUserStore()
       const broadcastStore = useBroadcastStore()
-      const apiStore = useApiStore()
       const user = userStore.getUserAllState
       broadcastStore.leaveSpaceRoom({ user: { id: user.id }, type: 'userLeftRoom' })
       globalStore.clearSearch()
@@ -830,10 +750,6 @@ export const useSpaceStore = defineStore('space', {
       this.incrementCardsCreatedCountFromSpace(space)
       globalStore.isLoadingSpace = false
       globalStore.triggerUpdateWindowHistory()
-      await apiStore.addToQueue({
-        name: 'createSpace',
-        body: space
-      })
     },
     async createNewHelloSpace () {
       const globalStore = useGlobalStore()
@@ -890,28 +806,13 @@ export const useSpaceStore = defineStore('space', {
       }
     },
     async checkIfShouldCreateNewUserSpaces () {
-      const userStore = useUserStore()
-      const spaces = await cache.getAllSpaces()
-      if (userStore.getUserIsSignedIn) { return }
-      if (spaces.length) { return }
-      await this.createNewInboxSpace(true)
-      await this.createNewHelloSpace()
-      this.updateUserLastSpaceId()
+
     },
 
     // update
 
     updateSpacePreviewImage: throttle(async function () {
-      const globalStore = useGlobalStore()
-      const userStore = useUserStore()
-      const apiStore = useApiStore()
-      const isSignedIn = userStore.getUserIsSignedIn
-      const canEditSpace = userStore.getUserCanEditSpace
-      if (!globalStore.isSpacePage) { return }
-      if (!isSignedIn) { return }
-      if (!canEditSpace) { return }
-      const response = await apiStore.updateSpacePreviewImage(this.id)
-      console.info('🙈 space preview image added to queue')
+
     }, 10 * 1000), // 10 seconds
     updateUserLastSpaceId () {
       const userStore = useUserStore()
@@ -923,34 +824,7 @@ export const useSpaceStore = defineStore('space', {
       userStore.updateUser({ lastSpaceId: this.id })
     },
     async updateOtherUsers () {
-      const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
-      const cardStore = useCardStore()
-      const cards = cardStore.getAllCards
-      let userIds = []
-      globalStore.clearOtherUsers()
-      const spaceMemberIds = this.users.map(user => user.id)
-      const spaceCollaboratorIds = this.collaborators.map(user => user.id)
-      userIds = userIds.concat(spaceMemberIds)
-      userIds = userIds.concat(spaceCollaboratorIds)
-      let otherUserIds = []
-      cards.forEach(card => {
-        const userId = card.nameUpdatedByUserId || card.userId
-        const isOtherUser = userIds.includes(userId)
-        if (!isOtherUser) {
-          otherUserIds.push(userId)
-        }
-      })
-      otherUserIds = uniq(otherUserIds)
-      if (!otherUserIds.length) { return }
-      try {
-        const users = await apiStore.getPublicUsers(otherUserIds) || []
-        users.forEach(user => {
-          globalStore.updateOtherUsers(user)
-        })
-      } catch (error) {
-        console.warn('🚑 updateOtherUsers', error)
-      }
+
     },
     broadcastUpdateSpace (update) {
       const broadcastStore = useBroadcastStore()
@@ -964,7 +838,6 @@ export const useSpaceStore = defineStore('space', {
       const globalStore = useGlobalStore()
       const cardStore = useCardStore()
       const userStore = useUserStore()
-      const apiStore = useApiStore()
       const canEditSpace = userStore.getUserCanEditSpace
       // other items to fetch
       let invites = []
@@ -999,12 +872,9 @@ export const useSpaceStore = defineStore('space', {
       spaceIds = spaceIds || []
       cardIds = cardIds || []
       invites = invites || []
-      const isEmpty = !cardIds.length && !spaceIds.length && !invites.length
-      if (isEmpty) { return }
-      await apiStore.addToGetOtherItemsQueue({ spaceIds, cardIds, invites })
+      // local-only: skip remote other-item fetch
     },
     async updateSpace (update) {
-      const apiStore = useApiStore()
       const keys = Object.keys(update)
       for (const key of keys) {
         this[key] = update[key]
@@ -1012,7 +882,6 @@ export const useSpaceStore = defineStore('space', {
       update.id = this.id
       if (update.isFromBroadcast) { return }
       this.broadcastUpdateSpace(update)
-      await apiStore.addToQueue({ name: 'updateSpace', body: update })
       await cache.updateSpaceByUpdates(update, this.id)
     },
     updateGroupMeta (space) {
@@ -1034,35 +903,23 @@ export const useSpaceStore = defineStore('space', {
 
     async removeSpace () {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const space = this.getSpaceAllState
       this.decrementCardsCreatedCountFromSpace(space)
       await cache.removeSpace(space)
       globalStore.prevSpaceIdInSession = ''
-      await apiStore.addToQueue({
-        name: 'removeSpace',
-        body: { id: space.id }
-      })
     },
     async deleteSpace (space) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       await cache.deleteSpace(space)
       globalStore.prevSpaceIdInSession = ''
-      await apiStore.addToQueue({
-        name: 'deleteSpace',
-        body: space
-      })
     },
     async deleteAllRemovedSpaces () {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const userId = userStore.id
       const removedSpaces = await cache.getAllRemovedSpaces()
       for (const space of removedSpaces) {
         await cache.deleteSpace(space)
       }
-      await apiStore.addToQueue({ name: 'deleteAllRemovedSpaces', body: { userId } })
     },
     async removeCurrentUserFromSpace () {
       const globalStore = useGlobalStore()
@@ -1145,7 +1002,6 @@ export const useSpaceStore = defineStore('space', {
     },
     async removeCollaboratorFromSpace (user, isFromBroadcast) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const broadcastStore = useBroadcastStore()
       const space = this.getSpaceAllState
@@ -1155,7 +1011,6 @@ export const useSpaceStore = defineStore('space', {
       await cache.updateSpace('collaborators', this.collaborators, this.id)
       const isCurrentUser = userStore.getUserIsCurrentUser(user)
       if (isCurrentUser) {
-        apiStore.removeSpaceCollaborator({ space, user })
         this.loadLastSpace()
         cache.removeInvitedSpace(space)
         cache.deleteSpace(space)
@@ -1224,16 +1079,12 @@ export const useSpaceStore = defineStore('space', {
       await cache.updateSpace('tags', this.tags, this.id)
     },
     async removeTag (tag) {
-      const apiStore = useApiStore()
       this.tags = this.tags.filter(spaceTag => spaceTag.id !== tag.id)
       await cache.updateSpace('tags', this.tags, this.id)
-      await apiStore.addToQueue({ name: 'removeTag', body: tag })
     },
     async removeTagsByName (tag) {
-      const apiStore = useApiStore()
       this.tags = this.tags.filter(spaceTag => spaceTag.name !== tag.name)
       await cache.removeTagsByName(tag)
-      await apiStore.addToQueue({ name: 'removeTagsByName', body: tag })
     },
     async deleteTagsFromAllRemovedCardsPermanent () {
       const cardIds = this.removedCards.map(card => card.id)
@@ -1243,7 +1094,6 @@ export const useSpaceStore = defineStore('space', {
       await cache.updateSpace('tags', this.tags, this.id)
     },
     async updateTagColorByName (updatedTag) {
-      const apiStore = useApiStore()
       this.tags = this.tags.map(tag => {
         if (tag.name === updatedTag.name) {
           tag.color = updatedTag.color
@@ -1251,7 +1101,6 @@ export const useSpaceStore = defineStore('space', {
         return tag
       })
       await cache.updateTagColorInAllSpaces(updatedTag)
-      await apiStore.addToQueue({ name: 'updateTagColorByName', body: { tag: updatedTag } })
     },
     async removeTagsByCard (card) {
       if (!card) { return }
@@ -1328,15 +1177,7 @@ export const useSpaceStore = defineStore('space', {
     // inbox
 
     async updateInboxCache () {
-      const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
-      const userStore = useUserStore()
-      const isSignedIn = userStore.getUserIsSignedIn
-      const isOffline = !globalStore.isOnline
-      if (!isSignedIn) { return }
-      if (isOffline) { return }
-      const inbox = await apiStore.getUserInboxSpace()
-      await cache.saveSpace(inbox)
+
     }
 
   }

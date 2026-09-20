@@ -1,25 +1,12 @@
 <script setup>
-import { reactive, computed, onMounted, onBeforeUnmount, onUnmounted, watch, ref, nextTick } from 'vue'
+import { reactive, onMounted, onBeforeUnmount, watch, ref, nextTick } from 'vue'
 
 import { useGlobalStore } from '@/stores/useGlobalStore'
-import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
-import { useChangelogStore } from '@/stores/useChangelogStore'
-
-import AppsAndExtensions from '@/components/dialogs/AppsAndExtensions.vue'
-import Help from '@/components/dialogs/Help.vue'
 import utils from '@/utils.js'
 import consts from '@/consts.js'
-import cache from '@/cache.js'
-import ThemeToggle from '@/components/ThemeToggle.vue'
-
-import dayjs from 'dayjs'
+import buddyHead from '@/assets/dreemurr/buddy-head-alpha.png'
 
 const globalStore = useGlobalStore()
-const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
-const changelogStore = useChangelogStore()
-
 const dialogElement = ref(null)
 
 onMounted(() => {
@@ -27,44 +14,41 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateDialogHeight)
+  document.body.style.overflow = ''
 })
 
 const props = defineProps({
   visible: Boolean
 })
-watch(() => props.visible, (value, prevValue) => {
+
+const apps = [
+  { name: 'snapdeck.app', href: 'https://snapdeck.app' },
+  { name: 'yarr.computer', href: 'https://yarr.computer' },
+  { name: 'kuku.mom', href: 'https://kuku.mom' },
+  { name: 'ulpaso.app', href: 'https://ulpaso.app' }
+]
+
+const state = reactive({
+  dialogHeight: null,
+  pageIsVisible: false
+})
+
+watch(() => props.visible, (value) => {
   if (value) {
-    closeDialogs()
-    state.fundingTipsIsVisible = false
+    state.pageIsVisible = false
     updateDialogHeight()
     globalStore.shouldExplicitlyHideFooter = true
   } else {
+    state.pageIsVisible = false
     globalStore.shouldExplicitlyHideFooter = false
+    document.body.style.overflow = ''
   }
 })
 
-const state = reactive({
-  whatsNewIsVisible: false,
-  appsAndExtensionsIsVisible: false,
-  helpIsVisible: false,
-  dialogHeight: null,
-  fundingTipsIsVisible: false
+watch(() => state.pageIsVisible, (value) => {
+  document.body.style.overflow = value ? 'hidden' : ''
 })
 
-const childDialogIsVisible = computed(() => {
-  return state.whatsNewIsVisible || state.appsAndExtensionsIsVisible || state.helpIsVisible
-})
-const isSecureAppContextIOS = computed(() => consts.isSecureAppContextIOS)
-const changelogIsUpdated = computed(() => changelogStore.getisRecentlyUpdated)
-const refreshBrowser = () => {
-  window.location.reload()
-}
-const closeDialogs = () => {
-  state.whatsNewIsVisible = false
-  state.appsAndExtensionsIsVisible = false
-  state.helpIsVisible = false
-  // state.fundingTipsIsVisible = false
-}
 const updateDialogHeight = async () => {
   if (!props.visible) { return }
   await nextTick()
@@ -72,205 +56,138 @@ const updateDialogHeight = async () => {
   state.dialogHeight = utils.elementHeight(element)
 }
 
-// spaces
-
-const currentSpaceIsChangelog = computed(() => spaceStore.id === consts.changelogSpaceId())
-// const currentSpaceIsAffiliate = computed(() => spaceStore.id === consts.affiliateSpaceId())
-const currentSpaceIsRoadmap = computed(() => spaceStore.id === consts.roadmapSpaceId())
-const changeSpaceToChangelog = () => {
-  const space = { id: consts.changelogSpaceId() }
-  const changelogId = changelogStore.updates[0]?.id
-  if (changelogId) {
-    cache.updatePrevReadChangelogId(changelogId)
-    changelogStore.isUpdated = false
-  }
-  spaceStore.changeSpace(space)
-}
-// const changeSpaceToAffiliate = () => {
-//   const space = { id: consts.affiliateSpaceId() }
-//   spaceStore.changeSpace(space)
-// }
-const changeSpaceToRoadmap = () => {
-  const space = { id: consts.roadmapSpaceId() }
-  spaceStore.changeSpace(space)
+const refreshBrowser = () => {
+  window.location.reload()
 }
 
-// donate
-
-const triggerDonateIsVisible = () => {
-  globalStore.closeAllDialogs()
-  globalStore.triggerDonateIsVisible()
+const openAboutPage = () => {
+  state.pageIsVisible = true
 }
 
-// keyboard shortcuts
+const closeAboutPage = () => {
+  state.pageIsVisible = false
+}
 
 const toggleKeyboardShortcutsIsVisible = () => {
   globalStore.closeAllDialogs()
   globalStore.triggerKeyboardShortcutsIsVisible()
 }
-
-// apps and extensions
-
-const toggleAppsAndExtensionsIsVisible = () => {
-  const isVisible = state.appsAndExtensionsIsVisible
-  closeDialogs()
-  state.appsAndExtensionsIsVisible = !isVisible
-}
-
-// help
-
-const toggleHelpIsVisible = () => {
-  const isVisible = state.helpIsVisible
-  closeDialogs()
-  state.helpIsVisible = !isVisible
-}
-
-// funding
-
-const toggleFundingTipsIsVisible = () => {
-  const isVisible = state.fundingTipsIsVisible
-  closeDialogs()
-  state.fundingTipsIsVisible = !isVisible
-}
 </script>
 
 <template lang="pug">
-dialog.about.narrow(v-if="visible" :open="visible" @click.left.stop="closeDialogs" ref="dialogElement" :style="{'max-height': state.dialogHeight + 'px'}" :class="{ overflow: !childDialogIsVisible }")
+dialog.about.narrow(v-if="visible" :open="visible" @click.left.stop ref="dialogElement" :style="{'max-height': state.dialogHeight + 'px'}")
   section.title-section
     .row.title-row
-      router-link(to="/about")
-        button.small-button About Kinopio
+      button.small-button(@click.left.stop="openAboutPage") About dreemurr
       .title-controls
-        .segmented-buttons
-          ThemeToggle(:isSmall="true")
         button.small-button(@click.left="refreshBrowser" title="Refresh")
           img.refresh.icon(src="@/assets/refresh.svg")
 
   section
-    .row
-      p Collect and connect your thoughts, ideas, and plans
-    .row
+    .row(v-for="app in apps" :key="app.href")
       .button-wrap
-        button(@click.stop="toggleHelpIsVisible" :class="{active: state.helpIsVisible}")
-          span Help
-        Help(:visible="state.helpIsVisible")
-      .button-wrap
-        a(href="/roadmap")
-          button(@click.left.stop.prevent="changeSpaceToRoadmap" :class="{ active: currentSpaceIsRoadmap }")
-            span 💐 Roadmap
-    .row
-      .button-wrap
-        a(href="/blog")
-          button
-            span Blog
-            //- img.new.icon(src="@/assets/new.gif" alt="new")
-            //- v-if blogisupdated
-      .button-wrap
-        a(href="/changelog")
-          button(@click.left.stop.prevent="changeSpaceToChangelog" :class="{ active: currentSpaceIsChangelog }")
-            span Changelog
-            img.updated.icon(src="@/assets/updated.gif" alt="updated" v-if="changelogIsUpdated")
-
-    //- .row
-    //-   a(href="https://kinopio.club/pop-up-shop-u9XxpuIzz2_LvQUAayl65")
-    //-     button
-    //-       img.icon(src="@/assets/sticker.svg")
-    //-       span Pop Up Shop{{' '}}
-              //- img.icon.visit(src="@/assets/visit.svg")
-  section
-    .row
-      .button-wrap
-        button(@click.left.stop="toggleAppsAndExtensionsIsVisible" :class="{active: state.appsAndExtensionsIsVisible}")
-          img.icon.system(src="@/assets/system.svg")
-          span Apps and Extensions
-        AppsAndExtensions(:visible="state.appsAndExtensionsIsVisible")
+        a(:href="app.href" target="_blank" rel="noopener noreferrer")
+          button {{ app.name }}
     .row
       .button-wrap
         button(@click.left.stop="toggleKeyboardShortcutsIsVisible")
           .badge.keyboard-shortcut.badge-in-button ?
           span Keyboard Shortcuts
-  section
-    .row.title-row.funding-row
-      p 100% funded and made possible by people like you
-      button.small-button(@click.left.stop="toggleFundingTipsIsVisible" :class="{active: state.fundingTipsIsVisible}")
-        span ?
-      //- The best way to support Kinopio is by spreading the word
-    //- .row
-    //-   .button-wrap
-    //-     a(href="https://kinopio.club/blog")
-    //-       button
-    //-         span Help Spread the Word →
-    section.subsection(v-if="state.fundingTipsIsVisible")
-      p Hi I'm{{' '}}
-        a(href="https://pketh.org") Piri
-        span , and I started building Kinopio in 2018.
-      p I believe in building ethical, economically-sustainable,
-        span {{' '}}
-        a(href="https://pketh.org/organic-software.html") organic software
-        span {{' '}}
-        span designed by artists, built by craftspeople, and funded by the people who enjoy it.
-      p If you're curious, I wrote{{' '}}
-        a(href="https://pketh.org/how-kinopio-is-made.html")
-          span How Kinopio is Made
-        span .
-      .row
-        .button-wrap(v-if="!isSecureAppContextIOS")
-          button(@click.left.stop="triggerDonateIsVisible")
-            .badge.donate-badge.badge-in-button
-            span Donate
-    //- .row
-    //-   WhoMakesKinopio
-  section
-    //- .row
-    //-   .button-wrap
-        //- a(href="https://kinopio.club/friends-of-kinopio-affiliate-program-YNmS6C3fofN3R9mYgO1Bu")
-        //-   button(@click.left.stop.prevent="changeSpaceToAffiliate" :class="{ active: currentSpaceIsAffiliate }")
-        //-     span Affiliate Program
-        //-     img.new.icon(src="@/assets/new.gif")
-    .row
-      .button-wrap
-        a(href="https://kinopio.club/discord" target="_blank")
-          button
-            span Discord{{' '}}
-      .button-wrap
-        a(href="https://kinopio.club/forum" target="_blank")
-          button
-            span Forum{{' '}}
 
-    .row
-      .button-wrap
-        router-link(to="/explore")
-          button
-            img.icon.sunglasses(src="@/assets/sunglasses.svg")
-            span Explore
-
+teleport(to="body")
+  Transition(name="about-fade")
+    .about-overlay(v-if="state.pageIsVisible" @click.left="closeAboutPage")
+      .about-modal(role="dialog" aria-modal="true" aria-labelledby="about-title" @click.left.stop @touchend.stop)
+        button.about-close(type="button" title="Close" @click.left="closeAboutPage")
+          img.icon.cancel(src="@/assets/add.svg")
+        img.about-mascot(:src="buddyHead" alt="" width="128" height="110")
+        h1#about-title.about-name {{ consts.appName }}
 </template>
 
 <style lang="stylus">
 dialog.about
   top calc(100% - 6px) !important
-  &.overflow
-    overflow auto
-  .icon.updated,
-  .icon.new
-    position absolute
-    bottom -6px
-    right 4px
   .keyboard-shortcut
     padding 0 4px !important
-  .about-video
-    border-radius var(--entity-radius)
-  .icon.system
-    vertical-align -1px
   .title-controls
     display flex
-    .segmented-buttons
-      margin-right 6px
-  .funding-row
-    align-items flex-start
-    button
-      margin 0
-  dialog.apps
-    left 8px !important
-    right initial !important
+
+.about-overlay
+  position fixed
+  inset 0
+  z-index var(--max-z)
+  display flex
+  align-items center
+  justify-content center
+  padding 24px
+  background rgba(255, 248, 242, 0.58)
+  backdrop-filter blur(16px) saturate(1.15)
+  -webkit-backdrop-filter blur(16px) saturate(1.15)
+  pointer-events all
+
+.about-modal
+  position relative
+  width 100%
+  max-width 360px
+  padding 40px 28px 28px
+  text-align center
+  background var(--primary-background)
+  border 1px solid var(--primary-border)
+  border-radius 14px
+  box-shadow var(--hover-shadow)
+  pointer-events all
+
+.about-close
+  position absolute
+  top 8px
+  right 8px
+  width 28px
+  min-width 28px
+  height 28px
+  margin 0
+  padding 0
+  display flex
+  align-items center
+  justify-content center
+  text-align center
+  .icon
+    margin 0
+
+.about-mascot
+  display block
+  width 128px
+  height auto
+  margin 0 auto 14px
+  user-select none
+  pointer-events none
+
+.about-name
+  margin 0
+  font-family var(--header-font-9)
+  font-size 28px
+  font-weight 700
+  font-style italic
+  letter-spacing -0.04em
+  color #E85D04
+  line-height 1.1
+
+.about-fade-enter-active,
+.about-fade-leave-active
+  transition opacity 0.18s ease
+  .about-modal
+    transition transform 0.22s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.18s ease
+
+.about-fade-enter-from,
+.about-fade-leave-to
+  opacity 0
+  .about-modal
+    opacity 0
+    transform translateY(12px) scale(0.98)
+
+@media (max-width 500px)
+  .about-modal
+    max-width 100%
+    padding 32px 20px 20px
+  .about-name
+    font-size 24px
 </style>

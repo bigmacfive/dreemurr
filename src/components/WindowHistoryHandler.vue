@@ -75,11 +75,11 @@ const updateWindowTitle = () => {
   let title
   // name
   if (space.name === 'Hello Kinopio') {
-    title = 'Kinopio'
+    title = consts.appName
   } else if (space.name) {
-    title = `${space.name} – Kinopio`
+    title = `${space.name} – ${consts.appName}`
   } else {
-    title = 'Kinopio'
+    title = consts.appName
   }
   // dev
   if (consts.isDevelopment()) {

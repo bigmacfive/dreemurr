@@ -18,9 +18,7 @@ import SpaceBackgroundGradients from '@/components/SpaceBackgroundGradients.vue'
 import cache from '@/cache.js'
 import consts from '@/consts.js'
 
-import sample from 'lodash-es/sample'
 import uniq from 'lodash-es/uniq'
-import debounce from 'lodash-es/debounce'
 import times from 'lodash-es/times'
 import { nanoid } from 'nanoid'
 
@@ -31,7 +29,6 @@ const spaceStore = useSpaceStore()
 const apiStore = useApiStore()
 const uploadStore = useUploadStore()
 
-const searchInputElement = ref(null)
 const inputElement = ref(null)
 const dialogElement = ref(null)
 
@@ -86,14 +83,11 @@ const state = reactive({
   },
   backgroundTint: '',
   defaultColor: '#e3e3e3',
-  search: '',
-  searchIsLoading: false,
   selectedImages: [],
   communityBackgroundsIsLoading: false,
   communityBackgroundImages: [],
-  images: [],
   gradients: [],
-  service: 'background' // background, recent, pexels
+  service: 'background' // background, recent
 })
 
 watch(() => props.visible, (value, prevValue) => {
@@ -161,38 +155,6 @@ const clearErrors = () => {
   state.error.sizeLimit = false
   state.error.unknownUploadError = false
 }
-const clearSearch = async () => {
-  state.search = ''
-  state.searchIsLoading = false
-  state.images = []
-}
-
-// input
-
-const searchInput = computed({
-  get () {
-    return state.search
-  },
-  set (newValue) {
-    state.search = newValue
-    if (newValue) {
-      searchService()
-    }
-  }
-})
-const focusAndSelectSearchInput = async () => {
-  await nextTick()
-  if (utils.isMobile()) { return }
-  const element = searchInputElement.value
-  if (!element) { return }
-  element.focus()
-  const length = element.value.length
-  if (!length) { return }
-  element.setSelectionRange(0, length)
-}
-const resetPinchCounterZoomDecimal = () => {
-  globalStore.pinchCounterZoomDecimal = 1
-}
 const toggleUrlInputIsVisible = () => {
   state.urlInputIsVisible = !state.urlInputIsVisible
 }
@@ -228,9 +190,6 @@ const gradientIsActive = (gradient) => {
 
 // background images list
 
-const isCurrentBackground = (image) => {
-  return image.url === background.value
-}
 const currentBackgroundUrl = computed(() => {
   if (props.space?.backgroundIsGradient) { return }
   return background.value
@@ -256,14 +215,6 @@ const updateCommunityBackgroundImages = async () => {
   })
   state.communityBackgroundImages = images
   state.communityBackgroundsIsLoading = false
-}
-const previewUrl = (image) => {
-  const isThemeDark = userStore.theme === 'dark'
-  let url = image.previewUrl
-  if (isThemeDark) {
-    url = image.darkPreviewUrl || image.previewUrl
-  }
-  return url
 }
 
 // update background
@@ -427,7 +378,6 @@ const recentImagesFromCacheSpaces = async () => {
 
 // services
 
-const serviceIsPexels = computed(() => state.service === 'pexels')
 const serviceIsRecent = computed(() => state.service === 'recent')
 const serviceIsBackground = computed(() => state.service === 'background')
 const updateService = async (service) => {
@@ -437,40 +387,8 @@ const updateService = async (service) => {
   } else if (service === 'recent') {
     const images = await recentImagesFromCacheSpaces()
     state.selectedImages = images
-  } else if (service === 'pexels') {
-    searchPexels()
-    focusAndSelectSearchInput()
   }
 }
-
-// pexels
-
-const searchPexels = async () => {
-  state.searchIsLoading = true
-  state.error.isNoSearchResults = false
-  state.error.unknownServerError = false
-  try {
-    const defaultSearches = ['animals', 'flowers', 'forest', 'ocean']
-    const defaultSearch = sample(defaultSearches)
-    const search = state.search || defaultSearch
-    const data = await apiStore.imageSearch(search)
-    state.images = data.photos.map(image => {
-      return {
-        id: image.id,
-        previewUrl: image.src.tiny,
-        url: image.src.large2x
-      }
-    })
-    if (!state.images.length) {
-      state.error.isNoSearchResults = true
-    }
-  } catch (error) {
-    console.error('🚒 searchService', error)
-    state.error.unknownServerError = true
-  }
-  state.searchIsLoading = false
-}
-const searchService = debounce(searchPexels, 350)
 
 // stretch
 
@@ -565,8 +483,6 @@ dialog.background-picker.wide(v-if="visible" :open="visible" @click.left.stop="c
         .segmented-buttons
           button(@click.left.stop="updateService('background')" :class="{ active: state.service === 'background'}")
             img.icon.flower(src="@/assets/flower.svg")
-          button(@click.left.stop="updateService('pexels')" :class="{ active: serviceIsPexels}")
-            img.icon(src="@/assets/search.svg")
           //- button(@click.left.stop="updateService('recent')" :class="{ active: serviceIsRecent}")
           //-   img.icon.time(src="@/assets/time.svg")
         //- Upload
@@ -612,32 +528,6 @@ dialog.background-picker.wide(v-if="visible" :open="visible" @click.left.stop="c
     //-       p.row-title Recently Used
     //-     ImageList(:images="state.selectedImages" :activeUrl="background" @selectImage="updateBackground" :isSmall="imageListIsSmall")
 
-    //- search results
-    template(v-else-if="serviceIsPexels")
-      section.results-section.search-input-wrap
-        .search-wrap
-          img.icon.search(v-if="!state.searchIsLoading" src="@/assets/search.svg" @click.left="focusSearchInput")
-          Loader(:visible="state.searchIsLoading")
-          input(
-            placeholder="Search Images on Pexels"
-            v-model="searchInput"
-            ref="searchInputElement"
-            @focus="resetPinchCounterZoomDecimal"
-            @keyup.stop.backspace
-            @keyup.stop.enter
-            @mouseup.stop
-            @touchend.stop
-          )
-          button.borderless.clear-input-wrap(@click.left="clearSearch")
-            img.icon.cancel(src="@/assets/add.svg")
-        .error-container(v-if="state.error.isNoSearchResults")
-          .badge.danger Nothing found on Pexels for {{state.search}}
-        .error-container(v-if="state.error.unknownServerError")
-          .badge.danger (シ_ _)シ Something went wrong, Please try again or contact support
-        ul.results-list.image-list
-          template(v-for="image in state.images" :key="image.id")
-            li(@click.left="updateBackground(image.url)" tabindex="0" v-on:keydown.enter="updateBackground(image.url)" :class="{ active: isCurrentBackground(image)}")
-              img(:src="previewUrl(image)")
 </template>
 
 <style lang="stylus">

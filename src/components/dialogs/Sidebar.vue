@@ -12,8 +12,6 @@ import Links from '@/components/sidebar/Links.vue'
 import Tags from '@/components/sidebar/Tags.vue'
 import Removed from '@/components/sidebar/Removed.vue'
 import Stats from '@/components/sidebar/Stats.vue'
-import Inbox from '@/components/sidebar/Inbox.vue'
-import Favorites from '@/components/sidebar/Favorites.vue'
 import SpaceHistory from '@/components/sidebar/SpaceHistory.vue'
 import Tasks from '@/components/sidebar/Tasks.vue'
 import Note from '@/components/sidebar/Note.vue'
@@ -62,9 +60,7 @@ const state = reactive({
   tagsIsVisible: false,
   linksIsVisible: false,
   removedIsVisible: false,
-  inboxIsVisible: false,
   statsIsVisible: false,
-  favoritesIsVisible: false,
   historyIsVisible: false,
   tasksIsVisible: false,
   noteIsVisible: false,
@@ -90,9 +86,7 @@ const clearVisible = () => {
   state.linksIsVisible = false
   state.tagsIsVisible = false
   state.removedIsVisible = false
-  state.inboxIsVisible = false
   state.statsIsVisible = false
-  state.favoritesIsVisible = false
   state.historyIsVisible = false
   state.tasksIsVisible = false
   state.noteIsVisible = false
@@ -162,12 +156,12 @@ const toggleSection = (value) => {
 const restoreUserLastSidebarSection = () => {
   clearVisible()
   const section = userStore.lastSidebarSection
-  const values = ['stats', 'inbox', 'removed', 'links', 'tags', 'favorites', 'history', 'tasks', 'note', 'atUserMentions', 'atDateMentions'] // listed in api docs
+  const values = ['stats', 'removed', 'links', 'tags', 'history', 'tasks', 'note', 'atUserMentions', 'atDateMentions']
   const isValid = values.includes(section)
   if (section && isValid) {
     state[section + 'IsVisible'] = true
   } else {
-    state.inboxIsVisible = true
+    state.tagsIsVisible = true
   }
 }
 const updateUserLastSidebarSection = (name) => {
@@ -203,12 +197,6 @@ dialog#sidebar.sidebar.is-pinnable(
       .button-wrap.segmented-buttons-wrap
         //- first row
         .segmented-buttons
-          //- Inbox
-          button(@click.left="toggleSection('inbox')" :class="{ active: state.inboxIsVisible}" title="Move from Inbox")
-            img.icon(src="@/assets/inbox.svg")
-          //- Favorites
-          button(@click.left="toggleSection('favorites')" :class="{ active: state.favoritesIsVisible}" title="Favorites")
-            img.icon(src="@/assets/heart-empty.svg")
           //- Stats
           button(@click.left="toggleSection('stats')" :class="{active: state.statsIsVisible}" title="Stats")
             img.icon.stats(src="@/assets/stats.svg")
@@ -249,8 +237,6 @@ dialog#sidebar.sidebar.is-pinnable(
   Links(:visible="state.linksIsVisible" :parentIsPinned="dialogIsPinned" :subsectionHeight="state.subsectionHeight")
   Removed(:visible="state.removedIsVisible" :subsectionHeight="state.subsectionHeight")
   Stats(:visible="state.statsIsVisible" :subsectionHeight="state.subsectionHeight")
-  Inbox(:visible="state.inboxIsVisible" :subsectionHeight="state.subsectionHeight")
-  Favorites(:visible="state.favoritesIsVisible" :subsectionHeight="state.subsectionHeight")
   SpaceHistory(:visible="state.historyIsVisible" :subsectionHeight="state.subsectionHeight")
   Tasks(:visible="state.tasksIsVisible" :subsectionHeight="state.subsectionHeight")
   AtUserMentions(:visible="state.atUserMentionsIsVisible" :subsectionHeight="state.subsectionHeight")

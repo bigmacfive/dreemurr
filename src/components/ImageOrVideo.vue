@@ -45,6 +45,7 @@ const emit = defineEmits(['loadSuccess'])
 const props = defineProps({
   isSelectedOrDragging: Boolean,
   pendingUploadDataUrl: String,
+  pendingUploadIsGif: Boolean,
   image: String,
   video: String,
   videoIsPaused: Boolean,
@@ -165,9 +166,7 @@ watch(() => isTouching.value, (value) => {
   }
 })
 const imageIsGif = computed(() => {
-  const url = state.imageUrl
-  if (!url) { return }
-  return url.includes('.gif')
+  return props.pendingUploadIsGif || utils.urlIsGif(state.imageUrl) || utils.urlIsGif(props.image) || utils.urlIsGif(props.pendingUploadDataUrl)
 })
 const updateIsPlaying = () => {
   // pause gifs and videos while the window or tab is inactive to reduce idle cpu and gpu use
@@ -279,10 +278,10 @@ img.image(
   v-if="state.imageUrl"
   ref="imageElement"
   :src="state.imageUrl"
-  :class="{selected: isSelectedOrDragging}"
+  :class="{selected: isSelectedOrDragging, 'is-gif': imageIsGif}"
   @load="handleSuccess"
   @error="handleError"
-  :loading="lazyLoading"
+  :loading="imageIsGif ? 'eager' : lazyLoading"
 )
 </template>
 
@@ -294,6 +293,8 @@ img.image(
     display block
     -webkit-touch-callout none // prevents safari mobile press-and-hold from interrupting
     content-visibility auto
+    &.is-gif
+      content-visibility visible
     &.selected
       mix-blend-mode color-burn
 </style>

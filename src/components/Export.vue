@@ -5,16 +5,15 @@ import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 
 import Loader from '@/components/Loader.vue'
 import utils from '@/utils.js'
+import cache from '@/cache.js'
 
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
 const connectionStore = useConnectionStore()
-const apiStore = useApiStore()
 
 const emit = defineEmits(['updateSpaces'])
 
@@ -82,8 +81,14 @@ const downloadAllSpacesRemote = async () => {
   state.unknownServerError = false
   state.isLoadingAllSpaces = true
   try {
-    const blob = await apiStore.downloadAllSpaces()
-    downloadBlob(blob, 'kinopio-spaces')
+    const spaces = await cache.getAllSpaces()
+    const json = JSON.stringify(spaces, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const blobUrl = window.URL.createObjectURL(blob)
+    const downloadAnchor = document.getElementById('export-downlaod-anchor')
+    downloadAnchor.setAttribute('href', blobUrl)
+    downloadAnchor.setAttribute('download', 'kinopio-spaces.json')
+    downloadAnchor.click()
   } catch (error) {
     console.error('🚒', error)
     state.unknownServerError = true
@@ -95,30 +100,6 @@ const duplicateSpace = async () => {
   state.spaceIsDuplicated = true
   emit('updateSpaces')
 }
-const triggerSignUpOrInIsVisible = () => {
-  globalStore.closeAllDialogs()
-  globalStore.triggerSignUpOrInIsVisible()
-}
-
-// pdf
-
-const togglePdfIsVisible = () => {
-  const isVisible = state.pdfIsVisible
-  state.pdfIsVisible = !isVisible
-  if (state.pdfIsVisible) {
-    pdf()
-  }
-}
-const pdf = async () => {
-  try {
-    const url = await apiStore.pdf()
-    console.info('🌎 pdf url', url)
-  } catch (error) {
-    console.error('🚒 pdf', error)
-    state.unknownServerError = true
-  }
-}
-
 // json canvas
 // https://jsoncanvas.org/spec/1.0/
 
@@ -211,16 +192,10 @@ template(v-if="visible")
     .row
       p Download File
     .row
-      .button-wrap(v-if="currentUserIsSignedIn")
-        button(@click.left.stop="togglePdfIsVisible" :class="{ active: state.pdfIsVisible }")
-          img.icon.file(src="@/assets/file.svg")
-          span PDF
       .button-wrap
         button(@click.left="downloadLocalJson")
           img.icon.file(src="@/assets/file.svg")
           span Space JSON
-    .row(v-if="state.pdfIsVisible")
-      span.badge.success PDF Sent to your Email
 
     details
       summary Other Formats
@@ -231,17 +206,9 @@ template(v-if="visible")
               img.icon.json-canvas(src="@/assets/json-canvas.svg")
               span Canvas
 
-        //- download all spaces
-        // anon user
-        template(v-if="!currentUserIsSignedIn")
-          p
-            span Sign Up or In for more export options
-          button(@click.left="triggerSignUpOrInIsVisible") Sign Up or In
-        // signed in user
-        template(v-if="currentUserIsSignedIn")
-          button(@click.left="downloadAllSpacesRemote" :class="{ active: state.isLoadingAllSpaces }")
-            span Download All Spaces Backup (JSON and TXT)
-            Loader(:visible="state.isLoadingAllSpaces")
+        button(@click.left="downloadAllSpacesRemote" :class="{ active: state.isLoadingAllSpaces }")
+          span Download All Spaces Backup (JSON)
+          Loader(:visible="state.isLoadingAllSpaces")
         a#export-downlaod-anchor.hidden
         .info-container(v-if="state.isLoadingAllSpaces")
           .badge.info This will take a minute or so…

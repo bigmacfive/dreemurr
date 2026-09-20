@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 import { useUserStore } from '@/stores/useUserStore'
 import { useListStore } from '@/stores/useListStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useThemeStore } from '@/stores/useThemeStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 
@@ -63,9 +62,9 @@ export const useConnectionStore = defineStore('connections', {
       if (useLastColor && this.getConnectionColors.length) {
         return this.getLastConnectionColor
       } else if (useLastColor) {
-        return themeStore.randomColor()
+        return userStore.color || consts.accent
       } else {
-        return this.newCurrentConnectionColor
+        return this.newCurrentConnectionColor || userStore.color || consts.accent
       }
     }
   },
@@ -236,7 +235,6 @@ export const useConnectionStore = defineStore('connections', {
     },
     async createConnection (connection) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const themeStore = useThemeStore()
@@ -256,7 +254,6 @@ export const useConnectionStore = defineStore('connections', {
       globalStore.lastInteractedConnectionColor = connection.color
       this.addConnectionToState(connection)
       broadcastStore.update({ updates: connection, store: 'connectionStore', action: 'addConnectionToState' })
-      await apiStore.addToQueue({ name: 'createConnection', body: connection })
     },
 
     // update
@@ -275,7 +272,6 @@ export const useConnectionStore = defineStore('connections', {
     },
     async updateConnections (updates) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
@@ -283,7 +279,6 @@ export const useConnectionStore = defineStore('connections', {
       this.updateConnectionsState(updates)
       broadcastStore.update({ updates, store: 'connectionStore', action: 'updateConnectionsState' })
       for (const connection of updates) {
-        await apiStore.addToQueue({ name: 'updateConnection', body: connection })
         if (connection.color) {
           globalStore.lastInteractedConnectionColor = connection.color
         }
@@ -340,15 +335,11 @@ export const useConnectionStore = defineStore('connections', {
       }
     },
     async removeConnections (ids) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const broadcastStore = useBroadcastStore()
       const canEditSpace = userStore.getUserCanEditSpace
       if (!canEditSpace) { return }
       this.removeConnectionsFromState(ids)
-      for (const id of ids) {
-        await apiStore.addToQueue({ name: 'removeConnection', body: { id } })
-      }
       broadcastStore.update({ updates: ids, store: 'connectionStore', action: 'removeConnectionsFromState' })
     },
     async removeConnection (id) {

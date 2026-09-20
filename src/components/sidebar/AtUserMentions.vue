@@ -5,7 +5,7 @@ import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useCardStore } from '@/stores/useCardStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
+import cache from '@/cache.js'
 
 import OfflineBadge from '@/components/OfflineBadge.vue'
 import ItemList from '@/components/ItemList.vue'
@@ -16,7 +16,7 @@ import UserLabelInline from '@/components/UserLabelInline.vue'
 const globalStore = useGlobalStore()
 const cardStore = useCardStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
+
 const userStore = useUserStore()
 
 let unsubscribes
@@ -122,7 +122,7 @@ const updateItemsBySpace = async () => {
     state.isLoading = true
     state.isError = false
     if (!itemsBySpace.value) {
-      globalStore.sidebarAtUserMentionsItemsBySpace = await apiStore.getUserAtUserMentions()
+      globalStore.sidebarAtUserMentionsItemsBySpace = await cache.getAtUserMentionsBySpace(userStore.id)
     }
     // update items
     globalStore.sidebarAtUserMentionsItemsBySpace.forEach(space => {
@@ -175,10 +175,7 @@ const selectCard = (card) => {
         button(:class="{ active: !scopeIsCurrentSpace }" @click="updateScopeIsCurrentSpace(false)")
           span All Spaces
 
-    section.subsection(v-if="!currentUserIsSignedIn && !scopeIsCurrentSpace")
-      .row.badge.info
-        span Sign Up or In to access your @mentions
-      button(@click.left="triggerSignUpOrInIsVisible") Sign Up or In
+    section.subsection(v-if="false")
 
     //- error
     .badge.error-badge.danger(v-if="state.isError")

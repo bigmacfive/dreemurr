@@ -78,6 +78,7 @@ const zoomPercentBadgePosition = computed(() => {
   const badgeWidth = 45
   let position = state.buttonPosition - (badgeWidth / 2)
   position = Math.min(position, max)
+  position = Math.max(position, 0)
   return position
 })
 const removeAnimations = () => {
@@ -209,7 +210,7 @@ const resetPlayhead = async () => {
   :data-min="props.minValue"
   :data-default-value="defaultValue"
 )
-  span.badge.info.zoom-percent-badge(
+  span.badge.zoom-percent-badge(
     ref="badgeElement"
     v-if="zoomPercentBadgeIsVisible"
     :style="{left: zoomPercentBadgePosition + 'px'}"
@@ -273,6 +274,7 @@ const resetPlayhead = async () => {
     display flex
     position absolute
     top -10px
+    background var(--brand)
     .inline-button
       cursor pointer
       vertical-align baseline

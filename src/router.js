@@ -33,17 +33,7 @@ const router = {
   routes: [
     {
       path: '/add',
-      name: 'add',
-      // route level code-splitting
-      // this generates a separate chunk (Add.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('./views/Add.vue'),
-      beforeEnter: (to, from, next) => {
-        const globalStore = useGlobalStore()
-        window.document.title = 'Add Card'
-        globalStore.isAddPage = true
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/api',
       name: 'api',
@@ -70,20 +60,7 @@ const router = {
     }, {
       path: '/',
       alias: aboutPaths,
-      name: 'about',
-      component: () => import('./views/About.vue'),
-      beforeEnter: (to, from, next) => {
-        const globalStore = useGlobalStore()
-        const userStore = useUserStore()
-        resetStoresForStaticPage()
-        const promoCode = to.query.promoCode
-        const isPromoCodeValid = affiliatePromoCodes.includes(promoCode)
-        if (isPromoCodeValid && !userStore.isUpgraded) {
-          globalStore.currentUserAffiliatePromoCode = promoCode
-          globalStore.notifyAffiliatePromo = true
-        }
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/app',
       name: 'space',
@@ -97,36 +74,13 @@ const router = {
       }
     }, {
       path: '/reset-password',
-      name: 'reset-password',
-      component: () => import('./views/Space.vue'),
-      beforeEnter: (to, from, next) => {
-        const globalStore = useGlobalStore()
-        const passwordResetToken = to.query.passwordResetToken
-        const apiKey = to.query.apiKey // legacy
-        if (apiKey) {
-          globalStore.addNotification({ message: 'Reset password link is expired. Request a new one.', type: 'danger' })
-        }
-        if (passwordResetToken) {
-          globalStore.passwordResetToken = passwordResetToken
-          globalStore.passwordResetIsVisible = true
-        }
-        history.replaceState({}, document.title, window.location.origin)
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/update-arena-access-token',
-      name: 'update-arena-access-token',
-      component: () => import('./views/Space.vue'),
-      beforeEnter: (to, from, next) => {
-        const arenaReturnedCode = to.query.code
-        next()
-        history.replaceState({}, document.title, window.location.origin)
-        const userStore = useUserStore()
-        userStore.updateUserArenaAccessToken(arenaReturnedCode)
-      }
+      redirect: '/app'
     }, {
       path: '/explore',
-      component: () => import('./views/Explore.vue')
+      redirect: '/app'
     }, {
       path: '/new',
       component: () => import('./views/Space.vue'),
@@ -136,20 +90,14 @@ const router = {
         next()
       }
     }, {
-      path: '/inbox', // used by /add
-      component: () => import('./views/Space.vue'),
-      beforeEnter: (to, from, next) => {
-        const globalStore = useGlobalStore()
-        globalStore.loadInboxSpace = true
-        next()
-      }
+      path: '/inbox',
+      redirect: '/app'
     }, {
       path: '/:space/:card',
       component: () => import('./views/Space.vue'),
       beforeEnter: (to, from, next) => {
         const globalStore = useGlobalStore()
         globalStore.disableViewportOptimizations = utils.stringToBoolean(to.query.disableViewportOptimizations)
-        globalStore.isPresentationMode = utils.stringToBoolean(to.query.present)
         globalStore.isCommentMode = utils.stringToBoolean(to.query.comment)
         const url = window.location.toString()
         globalStore.updateSpaceAndCardUrlToLoad(url)
@@ -175,42 +123,13 @@ const router = {
       }
     }, {
       path: '/donation-success',
-      name: 'donation-success',
-      component: () => import('./views/Space.vue'),
-      beforeEnter: (to, from, next) => {
-        const globalStore = useGlobalStore()
-        globalStore.notifyThanksForDonating = true
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/subscription-success',
-      name: 'subscription-success',
-      component: () => import('./views/Space.vue'),
-      beforeEnter: (to, from, next) => {
-        const globalStore = useGlobalStore()
-        const sessionId = to.query.sessionId
-        if (sessionId) {
-          globalStore.notifyThanksForUpgrading = true
-        }
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/group/invite/:groupId',
-      name: 'groupInvite',
-      component: () => import('./views/Space.vue'),
-      beforeEnter: async (to, from, next) => {
-        const globalStore = useGlobalStore()
-        const userStore = useUserStore()
-        const apiStore = useApiStore()
-        const groupId = to.params.groupId
-        const collaboratorKey = to.query.collaboratorKey
-        globalStore.shouldNotifyIsJoiningGroup = true
-        globalStore.groupToJoinOnLoad = { groupId, collaboratorKey }
-        await userStore.initializeUser()
-        const group = await apiStore.getGroupPublicMeta(groupId)
-        globalStore.groupToJoinOnLoad.group = group
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/affiliates',
       name: 'affiliates',
@@ -221,42 +140,7 @@ const router = {
       }
     }, {
       path: '/space/invite/:spaceId',
-      name: 'invite',
-      component: () => import('./views/Space.vue'),
-      beforeEnter: async (to, from, next) => {
-        const globalStore = useGlobalStore()
-        const userStore = useUserStore()
-        const themeStore = useThemeStore()
-        const spaceId = to.params.spaceId
-        const collaboratorKey = to.query.collaboratorKey
-        const readOnlyKey = to.query.readOnlyKey
-        const isDarkTheme = to.query.isDarkTheme
-        await userStore.initializeUser()
-        if (isDarkTheme) {
-          themeStore.updateTheme('dark')
-        }
-        globalStore.isLoadingSpace = true
-        if (!spaceId) {
-          globalStore.addNotification({ message: 'Invalid invite URL', type: 'danger' })
-          next()
-          return
-        }
-        globalStore.isPresentationMode = utils.stringToBoolean(to.query.present)
-        globalStore.isCommentMode = utils.stringToBoolean(to.query.comment)
-        globalStore.disableViewportOptimizations = utils.stringToBoolean(to.query.disableViewportOptimizations)
-        // edit
-        if (collaboratorKey) {
-          await inviteToEdit({ spaceId, collaboratorKey })
-        // read only
-        } else if (readOnlyKey) {
-          inviteToReadOnly({ spaceId, readOnlyKey })
-        // error
-        } else {
-          globalStore.addNotification({ message: 'Invalid invite URL', type: 'danger' })
-        }
-        // load space
-        next()
-      }
+      redirect: '/app'
     }, {
       path: '/group/:groupId',
       name: 'group',
@@ -272,7 +156,6 @@ const router = {
       component: () => import('./views/Space.vue'),
       beforeEnter: (to, from, next) => {
         const globalStore = useGlobalStore()
-        globalStore.isPresentationMode = utils.stringToBoolean(to.query.present)
         const url = window.location.toString()
         globalStore.updateSpaceAndCardUrlToLoad(url)
         next()

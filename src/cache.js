@@ -5,6 +5,7 @@ import * as idb from 'idb-keyval'
 
 import utils from '@/utils.js'
 import consts from '@/consts.js'
+import { saveSpaceFile, removeSpaceFile, syncAllSpaces, loadDiskSpaces, mergeDiskSpaces } from '@/desktop/dreemFiles.js'
 
 const updateErrorMessage = '🚑 could not updateSpace cache because cachedSpace does not exist (ignore if space is read-only or open)'
 let showDebugMessages = false
@@ -178,6 +179,22 @@ export default {
       return space
     })
     spacesWithNames = spacesWithNames.filter(space => Boolean(space))
+    if (consts.isTauri()) {
+      try {
+        const diskSpaces = await loadDiskSpaces()
+        spacesWithNames = mergeDiskSpaces(spacesWithNames, diskSpaces)
+        for (const space of diskSpaces) {
+          if (!space?.id) { continue }
+          const existing = await this.getLocal(`space-${space.id}`)
+          const existingSpace = utils.normalizeToObject(existing)
+          if (!existingSpace?.id) {
+            await this.saveLocal(`space-${space.id}`, space)
+          }
+        }
+      } catch (error) {
+        console.error('🚒 loadDiskSpaces', error)
+      }
+    }
     const sortedSpaces = spacesWithNames.sort((a, b) => {
       return b.cacheDate - a.cacheDate
     })
@@ -237,6 +254,7 @@ export default {
       }
       space.cacheDate = Date.now()
       await this.saveLocal(`space-${space.id}`, space)
+      saveSpaceFile(space)
     } catch (error) {
       console.error('🚒 saveSpace could not save', space, error)
     }
@@ -283,10 +301,12 @@ export default {
     space = await this.getLocal(spaceKey)
     await this.saveLocal(`removed-${spaceKey}`, space)
     await this.removeLocal(spaceKey)
+    await removeSpaceFile(space)
   },
   async deleteSpace (space) {
     await this.removeLocal(`removed-space-${space.id}`)
     await this.removeLocal(`space-${space.id}`)
+    await removeSpaceFile(space)
   },
   async restoreRemovedSpace (space) {
     const spaceKey = `removed-space-${space.id}`
@@ -351,6 +371,79 @@ export default {
     })
     tags.reverse()
     return tags
+  },
+  async getTodosBySpace () {
+    const spaces = await this.getAllSpaces()
+    return spaces.map(space => {
+      const cards = (space.cards || []).filter(card => {
+        return !card.isRemoved && utils.checkboxFromString(card.name)
+      }).map(card => {
+        return { ...card, spaceId: space.id, itemType: 'card' }
+      })
+      const boxes = (space.boxes || []).filter(box => {
+        return !box.isRemoved && utils.checkboxFromString(box.name)
+      }).map(box => {
+        return { ...box, spaceId: space.id, itemType: 'box' }
+      })
+      return { ...space, cards, boxes }
+    })
+  },
+  async searchCards (query) {
+    const spaces = await this.getAllSpaces()
+    const needle = (query || '').toLowerCase()
+    const results = []
+    if (!needle) { return results }
+    spaces.forEach(space => {
+      (space.cards || []).forEach(card => {
+        if (card.isRemoved) { return }
+        const name = (card.name || '').toLowerCase()
+        if (!name.includes(needle)) { return }
+        results.push({ ...card, spaceId: space.id, spaceName: space.name })
+      })
+    })
+    return results
+  },
+  async getAtUserMentionsBySpace (userId) {
+    const spaces = await this.getAllSpaces()
+    return spaces.map(space => {
+      const cards = (space.cards || []).filter(card => {
+        if (card.isRemoved) { return }
+        return card.atUserMentions?.find(mention => mention.userId === userId)
+      }).map(card => {
+        return { ...card, spaceId: space.id }
+      })
+      return { ...space, cards }
+    }).filter(space => space.cards.length)
+  },
+  async getAtDateMentionsBySpace () {
+    const spaces = await this.getAllSpaces()
+    return spaces.map(space => {
+      const cards = (space.cards || []).filter(card => {
+        if (card.isRemoved) { return }
+        return utils.arrayHasItems(card.atDateMentions)
+      }).map(card => {
+        return { ...card, spaceId: space.id }
+      })
+      return { ...space, cards }
+    }).filter(space => space.cards.length)
+  },
+  async updateCardInSpace (spaceId, update) {
+    const space = await this.space(spaceId)
+    if (!space.cards) { return }
+    space.cards = space.cards.map(card => {
+      if (card.id !== update.id) { return card }
+      return { ...card, ...update }
+    })
+    await this.saveSpace(space)
+  },
+  async updateBoxInSpace (spaceId, update) {
+    const space = await this.space(spaceId)
+    if (!space.boxes) { return }
+    space.boxes = space.boxes.map(box => {
+      if (box.id !== update.id) { return box }
+      return { ...box, ...update }
+    })
+    await this.saveSpace(space)
   },
   async updateTagColorInAllSpaces (tag) {
     const spaces = await this.getAllSpaces()
@@ -462,5 +555,11 @@ export default {
   async updateEmojis ({ emojis, version }) {
     await this.saveLocal('emojis', emojis)
     await this.saveLocal('emojiUnicodeVersion', version)
+  },
+
+  async syncDreemFiles () {
+    if (!consts.isTauri()) { return }
+    const spaces = await this.getAllSpaces()
+    await syncAllSpaces(spaces)
   }
 }

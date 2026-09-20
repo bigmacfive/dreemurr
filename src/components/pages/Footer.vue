@@ -5,7 +5,6 @@ import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
 
-import DiscoveryButtons from '@/components/DiscoveryButtons.vue'
 import consts from '@/consts.js'
 
 import utils from '@/utils.js'
@@ -46,12 +45,6 @@ onBeforeUnmount(() => {
   unsubscribes()
 })
 
-watch(() => globalStore.isPresentationMode, (value, prevValue) => {
-  if (!value) {
-    globalStore.shouldExplicitlyHideFooter = false
-  }
-})
-
 const state = reactive({
   position: {},
   isHiddenOnTouch: false,
@@ -76,23 +69,13 @@ watch(() => isTouchScrolling.value, (value, prevValue) => {
 })
 
 const shouldExplicitlyHideFooter = computed(() => globalStore.shouldExplicitlyHideFooter)
-const shouldHideFooter = computed(() => globalStore.shouldHideFooter)
-const isOnline = computed(() => globalStore.isOnline)
 const isFadingOut = computed(() => globalStore.isFadingOutDuringTouch)
 const isTouchDevice = computed(() => globalStore.getIsTouchDevice)
 
 // visible
 
 const isVisible = computed(() => {
-  if (globalStore.isSpacePage) { return }
-  if (!leftControlsIsVisible.value) { return }
-  if (!isOnline.value) { return }
-  return true
-})
-const leftControlsIsVisible = computed(() => {
-  if (shouldExplicitlyHideFooter.value) { return }
-  if (shouldHideFooter.value) { return }
-  return true
+  return false
 })
 // hide
 
@@ -168,8 +151,6 @@ const updatePositionInVisualViewport = () => {
 .footer-wrap(:style="state.position" v-if="isVisible" :class="{'fade-out': isFadingOut}" ref="footerElement")
   .left
     footer
-      .footer-button-wrap
-        DiscoveryButtons
 </template>
 
 <style lang="stylus">

@@ -17,7 +17,6 @@ import Offline from '@/components/dialogs/Offline.vue'
 import User from '@/components/User.vue'
 import SignUpOrIn from '@/components/dialogs/SignUpOrIn.vue'
 import UpdatePassword from '@/components/dialogs/UpdatePassword.vue'
-import Share from '@/components/dialogs/Share.vue'
 import UserNotifications from '@/components/dialogs/UserNotifications.vue'
 import Loader from '@/components/Loader.vue'
 import templates from '@/data/templates.js'
@@ -141,7 +140,6 @@ const state = reactive({
   spaceDetailsIsVisible: false,
   spaceDetailsInfoIsVisible: false,
   signUpOrInIsVisible: false,
-  shareIsVisible: false,
   notificationsIsVisible: false,
   loadingSignUpOrIn: false,
   keyboardShortcutsIsVisible: false,
@@ -243,7 +241,6 @@ const currentSpaceIsTemplate = computed(() => {
   const templateSpaceIds = templates.spaces().map(space => space.id)
   return templateSpaceIds.includes(spaceStore.id)
 })
-const currentSpaceIsInbox = computed(() => spaceStore.name === 'Inbox')
 const currentSpaceIsPrivateOrOpen = computed(() => spaceStore.getSpaceIsPrivate || spaceStore.getSpaceIsOpen)
 const shouldShowInExplore = computed(() => {
   if (spaceStore.getSpaceIsPrivate) { return false }
@@ -325,7 +322,7 @@ const notificationsUnreadCount = computed(() => {
 const isEmbedMode = computed(() => globalStore.isEmbedMode)
 const openKinopio = () => {
   const url = currentSpaceUrl.value
-  const title = `${currentSpaceName.value} – Kinopio`
+  const title = `${currentSpaceName.value} – ${consts.appName}`
   window.open(url, title)
 }
 
@@ -354,12 +351,12 @@ const isVisible = computed(() => {
     return true
   }
 })
+const isTauri = computed(() => Boolean(window.__TAURI_INTERNALS__))
 const offlineIsVisible = computed(() => globalStore.offlineIsVisible)
 const closeAllDialogs = () => {
   state.aboutIsVisible = false
   state.spaceDetailsInfoIsVisible = false
   state.signUpOrInIsVisible = false
-  state.shareIsVisible = false
   state.keyboardShortcutsIsVisible = false
   state.appsAndExtensionsIsVisible = false
   state.upgradeUserIsVisible = false
@@ -420,11 +417,6 @@ const toggleSignUpOrInIsVisible = () => {
   const isVisible = state.signUpOrInIsVisible
   globalStore.closeAllDialogs()
   state.signUpOrInIsVisible = !isVisible
-}
-const toggleShareIsVisible = () => {
-  const isVisible = state.shareIsVisible
-  globalStore.closeAllDialogs()
-  state.shareIsVisible = !isVisible
 }
 const toggleNotificationsIsVisible = () => {
   const isVisible = state.notificationsIsVisible
@@ -600,7 +592,7 @@ const clearNotifications = () => {
 </script>
 
 <template lang="pug">
-header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut, 'hidden': state.isHidden}")
+header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut, 'hidden': state.isHidden, 'is-tauri': isTauri}")
   //- embed
   nav.embed-nav(v-if="isEmbedMode")
     a(:href="currentSpaceUrl" @mousedown.left.stop="openKinopio" @touchstart.stop="openKinopio")
@@ -627,7 +619,7 @@ header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut
         //- About
         .logo-about
           .button-wrap
-            .logo(alt="kinopio logo" @click.left.stop="toggleAboutIsVisible" @touchend.stop @mouseup.left.stop :class="{active: state.aboutIsVisible}" tabindex="0")
+            .logo(alt="dreemurr logo" @click.left.stop="toggleAboutIsVisible" @touchend.stop @mouseup.left.stop :class="{active: state.aboutIsVisible}" tabindex="0")
               .logo-image
                 .label-badge.small-badge(v-if="shouldShowChangelogIsUpdated")
                   span NEW
@@ -664,23 +656,8 @@ header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut
               img.icon.cancel(src="@/assets/add.svg")
 
       .right
-        //- Users
-        SpaceUsersHeader(:userDetailsIsInline="true")
         UserSettings
         UpdatePassword
-        SpaceUsers
-        UserGroups
-        .button-wrap
-          .segmented-buttons
-            //- Share
-            button(@click.left.stop="toggleShareIsVisible" :class="{active: state.shareIsVisible, 'translucent-button': !shouldIncreaseUIContrast}")
-              span Share
-            //- Notifications
-            button(@click.left.stop="toggleNotificationsIsVisible" :class="{active: state.notificationsIsVisible, 'translucent-button': !shouldIncreaseUIContrast}" title="Notifications")
-              span {{notificationsUnreadCount}}
-              .badge.new-unread-badge.notification-button-badge(v-if="notificationsUnreadCount")
-          Share(:visible="state.shareIsVisible")
-          UserNotifications(:visible="state.notificationsIsVisible" :loading="state.notificationsIsLoading" :notifications="globalStore.userNotifications" :unreadCount="notificationsUnreadCount" @markAllAsRead="markAllAsRead" @markAsRead="markAsRead")
 
     //- 2nd row
     .row
@@ -698,7 +675,6 @@ header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut
             .button-wrap(:class="{ 'back-button-is-visible': backButtonIsVisible }")
               button(@click.left.stop="toggleSpaceDetailsIsVisible" :class="{ active: state.spaceDetailsIsVisible, 'translucent-button': !shouldIncreaseUIContrast }" title="Space Details and Spaces List")
                 .space-name-wrap(:class="{'space-is-hidden': currentSpaceIsHidden}")
-                  img.icon.inbox-icon(v-if="currentSpaceIsInbox" src="@/assets/inbox.svg")
                   //- name
                   span.space-name {{currentSpaceName}}
                   .space-name-icons
@@ -706,8 +682,7 @@ header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut
                     span(v-if="currentSpaceIsTemplate")
                       img.icon.templates(src="@/assets/templates.svg")
                     //- private
-                    template(v-if="currentSpaceIsPrivateOrOpen")
-                      PrivacyIcon(:privacy="currentSpace.privacy")
+                    //- privacy icon hidden in offline-local copy
 
                 //- img.icon.sidebar.flip-left(src="@/assets/sidebar.svg" :class="{'space-is-hidden': currentSpaceIsHidden}")
                 //- span as
@@ -728,23 +703,6 @@ header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut
                 //-   //- (v-if="currentSpaceIsTemplate")
                 //-   img.icon.templates(src="@/assets/templates.svg")
 
-                .label-badge.group-label-badge(v-if="spaceGroup")
-                  GroupLabel(:group="spaceGroup")
-
-                //- read only badge
-                .label-badge(v-if="!userCanEditSpace" title="You can only read this space")
-                  span(:class="{'invisible': state.readOnlyJiggle}")
-                    span Read Only
-                  span.invisible-badge(ref="readOnlyElement" :class="{'badge-jiggle': state.readOnlyJiggle, 'invisible': !state.readOnlyJiggle}")
-                    span Read Only
-                //- comment only badge
-                .label-badge.success(v-else-if="userCanOnlyComment" title="You can only comment in this space")
-                  span(:class="{'invisible': state.readOnlyJiggle}")
-                    span Comment Only
-                //- in explore badge
-                .label-badge.secondary(v-if="shouldShowInExplore" title="Space is in Explore")
-                  span
-                    img.icon.sunglasses.explore(src="@/assets/sunglasses.svg")
                 //- is removed badge
                 .label-badge.danger(v-if="currentSpaceIsRemoved" title="Space is removed")
                   span
@@ -765,22 +723,6 @@ header(v-if="isVisible" :style="state.position" :class="{'fade-out': isFadingOut
 
       .right
         DateAndTimeSettings(:visible="state.dateAndTimeSettingsIsVisible")
-        //- Pricing
-        .button-wrap.pricing-button-wrap(v-if="!isUpgraded")
-          button(@click.left.stop="togglePricingIsVisible" :class="{active: pricingIsVisible, 'translucent-button': !shouldIncreaseUIContrast}")
-            span Pricing
-          Pricing(:visible="pricingIsVisible")
-        //- Sign Up or In
-        .button-wrap(v-if="!currentUserIsSignedIn && isOnline")
-          button(@click.left.stop="toggleSignUpOrInIsVisible" :class="{active: state.signUpOrInIsVisible, 'translucent-button': !shouldIncreaseUIContrast}")
-            span Sign Up or In
-            Loader(:visible="state.loadingSignUpOrIn")
-          SignUpOrIn(:visible="state.signUpOrInIsVisible" @loading="setLoadingSignUpOrIn")
-        //- Upgrade
-        .button-wrap(v-if="!isUpgraded && isOnline && currentUserIsSignedIn")
-          button(@click.left.stop="toggleUpgradeUserIsVisible" :class="{active: state.upgradeUserIsVisible, 'translucent-button': !shouldIncreaseUIContrast}")
-            span Upgrade
-          UpgradeUser(:visible="state.upgradeUserIsVisible" @closeDialog="closeAllDialogs")
 
         //- Sidebar
         .button-wrap
@@ -810,6 +752,8 @@ header
   justify-content space-between
   transition 0.2s opacity
   transform-origin left top
+  &.is-tauri
+    top var(--titlebar-height)
   nav,
   aside
     pointer-events none

@@ -137,7 +137,8 @@ const isCanvasScope = (event) => {
 
 // on key up
 const handleShortcutsOnKeyUp = (event) => {
-  const key = event.key.toLowerCase()
+  if (utils.isCompositionKeyboardEvent(event)) { return }
+  const key = (event.key || '').toLowerCase()
   const keyCode = event.code // physical key on the keyboard
   const keyB = key === 'b' || keyCode === 'KeyB'
   const keyL = key === 'l' || keyCode === 'KeyL'
@@ -169,9 +170,7 @@ const handleShortcutsOnKeyUp = (event) => {
     userStore.updateUser({ shouldShowMinimap: value })
   // t
   } else if (keyT && isSpaceScope) {
-    globalStore.addNotification({ message: 'Theme toggled (T)', type: 'info' })
-    themeStore.toggleTheme()
-    themeStore.updateThemeIsSystem(false)
+    // Theme is light-only in the offline-local copy
   // Backspace, Clear, Delete
   } else if ((key === 'backspace' || key === 'clear' || key === 'delete') && isSpaceScope) {
     remove()
@@ -258,14 +257,14 @@ const handleShortcutsOnKeyUp = (event) => {
 }
 // on key down
 const handleShortcutsOnKeyDown = (event) => {
-  const key = event.key.toLowerCase()
+  if (utils.isCompositionKeyboardEvent(event)) { return }
+  const key = (event.key || '').toLowerCase()
   const keyCode = event.code // physical key on the keyboard
   const keyZ = key === 'z' || keyCode === 'KeyZ'
   const keyA = key === 'a' || keyCode === 'KeyA'
   const keyK = key === 'k' || keyCode === 'KeyK'
   const keyF = key === 'f' || keyCode === 'KeyF'
   const keyG = key === 'g' || keyCode === 'KeyG'
-  const keyP = key === 'p' || keyCode === 'KeyP'
   const keyL = key === 'l' || keyCode === 'KeyL'
   const isMeta = event.metaKey || event.ctrlKey
   const isCardScope = checkIsCardScope(event)
@@ -334,10 +333,6 @@ const handleShortcutsOnKeyDown = (event) => {
   } else if (keyZ && isSpaceScope) {
     event.preventDefault()
     globalStore.triggerSpaceZoomOutMax()
-  } else if (keyP && isSpaceScope && !isMeta) {
-    const value = !globalStore.isPresentationMode
-    globalStore.isPresentationMode = value
-    event.preventDefault()
   // Pan
   } else if (key === ' ' && isSpaceScope) {
     event.preventDefault()
@@ -779,19 +774,17 @@ const clipboardDataFromData = (data) => {
   if (data.text !== globalStore.clipboardData.text) { return }
   return utils.clone(globalStore.clipboardData)
 }
-const getClipboardData = async () => {
+const getClipboardData = async (event) => {
   globalStore.clearNotificationsWithPosition()
-  const position = currentCursorPosition || prevCursorPosition
   try {
-    const data = await utils.dataFromClipboard()
-    data.clipboardData = clipboardDataFromData(data, position)
+    const data = await utils.dataFromClipboard(event)
+    data.clipboardData = clipboardDataFromData(data)
     if (data.text || data.file || data.clipboardData) {
-      globalStore.addNotificationWithPosition({ message: 'Pasted', position, type: 'success', layer: 'app', icon: 'cut' })
       return data
     }
   } catch (error) {
     console.error('🚑 getClipboardData', error)
-    globalStore.addNotificationWithPosition({ message: 'Could not paste', position, type: 'danger', layer: 'app', icon: 'cut' })
+    globalStore.addNotification({ message: 'Could not paste', type: 'danger' })
   }
 }
 
@@ -805,14 +798,15 @@ const handlePasteEvent = async (event) => {
   // check card limits
   if (spaceStore.getShouldPreventAddFreeCard) {
     globalStore.updateNotifyCardsCreatedIsOverLimit(true)
-    globalStore.addNotificationWithPosition({ message: 'Upgrade to Add', position, type: 'danger', layer: 'app', icon: 'cancel' })
+    globalStore.addNotification({ message: 'Upgrade to Add', type: 'danger' })
     return
   }
   // check read only
   userStore.notifyReadOnly(position)
   const canEditSpace = userStore.getUserCanEditSpace
   if (!canEditSpace) { return }
-  const data = await getClipboardData()
+  const data = await getClipboardData(event)
+  if (!data) { return }
   // get and set itemsData
   let itemsData = data.clipboardData?.data
   if (data.text && utils.normalizeString(data.text) === utils.normalizeString(globalStore.clipboardData?.text)) {

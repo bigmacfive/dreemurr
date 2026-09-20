@@ -5,17 +5,16 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
 import { useGlobalStore } from '@/stores/useGlobalStore'
-import { useThemeStore } from '@/stores/useThemeStore'
 import { useStoreAction } from '@/composables/useStoreAction.js'
 
 import utils from '@/utils.js'
+import consts from '@/consts.js'
 import last from 'lodash-es/last'
 
 const globalStore = useGlobalStore()
 const connectionStore = useConnectionStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const themeStore = useThemeStore()
 
 useStoreAction(globalStore, {
   triggerUpdateCurrentConnectorColor: () => updateCurrentConnectorColor(),
@@ -239,7 +238,7 @@ const currentUserIsCreatingConnectionColor = computed(() => {
 // connector preview color
 
 const updateCurrentConnectionColor = () => {
-  connectionStore.newCurrentConnectionColor = themeStore.randomColor()
+  connectionStore.newCurrentConnectionColor = userStore.color || consts.accent
   globalStore.currentConnectionColor = connectionStore.getNewConnectionColor
   globalStore.triggerUpdateCurrentConnectorColor()
   state.currentConnectorColor = globalStore.currentConnectionColor

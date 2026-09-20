@@ -4,7 +4,6 @@ import { reactive, computed, onMounted, onBeforeUnmount, onUnmounted, watch, ref
 import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 
 import cache from '@/cache.js'
 import Tag from '@/components/Tag.vue'
@@ -18,7 +17,6 @@ import uniqBy from 'lodash-es/uniqBy'
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 
 const dialogElement = ref(null)
 const resultsElement = ref(null)

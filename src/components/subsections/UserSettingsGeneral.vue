@@ -126,27 +126,6 @@ const toggleIsDebugMode = () => {
 
 <template lang="pug">
 .user-settings-general(v-if="visible" @click="closeDialogs")
-  //- controls
-  section
-    //- Notifications
-    .row
-      .button-wrap
-        button(@click.left.stop="toggleNotificationSettingsIsVisible" :class="{active: state.notificationSettingsIsVisible}")
-          img.icon.mail(src="@/assets/mail.svg")
-          span Notifications
-          teleport(to="#settings-child-dialogs" defer)
-            NotificationSettings(:visible="state.notificationSettingsIsVisible")
-
-    //- Theme and Colors
-    .row
-      .button-wrap
-        .segmented-buttons
-          ThemeToggle
-          button(@click.left.stop="toggleThemeSettingsIsVisible" :class="{active: state.themeSettingsIsVisible}")
-            span Theme Settings
-          teleport(to="#settings-child-dialogs" defer)
-            ThemeSettings(:visible="state.themeSettingsIsVisible")
-
   //- Account Settings
   section
     .row
@@ -157,14 +136,6 @@ const toggleIsDebugMode = () => {
           span Account
           teleport(to="#settings-child-dialogs" defer)
             UserAccountSettings(:visible="state.userAccountSettingsIsVisible")
-
-      //- Billing
-      .button-wrap
-        button(@click.left.stop="toggleUserBillingSettingsIsVisible" :class="{active: state.userBillingSettingsIsVisible}")
-          span(v-if="isSecureAppContextIOS") Billing
-          span(v-else) Billing
-          teleport(to="#settings-child-dialogs" defer)
-            UserBillingSettings(:visible="state.userBillingSettingsIsVisible")
     .row
       //- Date and Time
       .button-wrap

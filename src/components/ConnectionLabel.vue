@@ -487,7 +487,7 @@ const boundaryBottomIsVisible = computed(() => labelRelativePosition.value.y >= 
   pointer-events all
   cursor pointer
   position absolute
-  z-index 1
+  z-index calc(var(--max-z) - 200)
   width max-content
   &:hover
     box-shadow var(--hover-shadow)

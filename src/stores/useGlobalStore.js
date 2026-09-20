@@ -7,7 +7,6 @@ import { useCardStore } from '@/stores/useCardStore'
 import { useBoxStore } from '@/stores/useBoxStore'
 import { useLineStore } from '@/stores/useLineStore'
 import { useListStore } from '@/stores/useListStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 
 import utils from '@/utils.js'
@@ -426,10 +425,9 @@ export const useGlobalStore = defineStore('global', {
     getDateImageUrl () {
       if (this.dateImageUrl) {
         return this.dateImageUrl
-      } else {
-        const date = dayjs().format('MM-DD-YYYY') // 11-19-2024
-        return `${consts.cdnHost}/date/${date}.jpg` // https://cdn.kinopio.club/date/11-19-24.jpg
       }
+      const origin = (typeof window !== 'undefined' && window.location?.origin) || ''
+      return `${origin}/yarr.png`
     },
     getToolbarIsDrawing () {
       return this.currentUserToolbar === 'drawing'
@@ -1352,8 +1350,7 @@ export const useGlobalStore = defineStore('global', {
     // Tags
 
     async updateTags () {
-      const apiStore = useApiStore()
-      const userTags = await apiStore.getUserTags()
+      const userTags = await cache.allTags()
       this.tags = uniqBy(userTags, 'name')
     },
 

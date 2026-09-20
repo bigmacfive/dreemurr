@@ -1,30 +1,18 @@
 import { nextTick } from 'vue'
 import { defineStore } from 'pinia'
 
-import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
-import { useApiStore } from '@/stores/useApiStore'
-
-import utils from '@/utils.js'
-import consts from '@/consts.js'
 
 export const useAnalyticsStore = defineStore('analytics', {
   getters: {
     shouldSend () {
-      const globalStore = useGlobalStore()
-      if (consts.isDevelopment()) { return }
-      // if (userStore.analyticsIsDisabled) { return }
-      if (!globalStore.isOnline) { return }
-      return true
+      return false
     }
   },
 
   actions: {
     async send (body) {
-      const apiStore = useApiStore()
-      if (!this.shouldSend) { return }
-      apiStore.sendAnalyticsEvent(body)
-      console.info('👻 analytics event:', body.name)
+      // local-only: analytics are disabled
     },
     event (eventName) {
       const userStore = useUserStore()

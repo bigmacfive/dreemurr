@@ -41,9 +41,9 @@ onMounted(() => {
     themeStore.restoreTheme()
   }
   if (consts.isDevelopment()) {
-    document.title = '[DEV] Kinopio'
+    document.title = '[DEV] dreemurr'
   } else {
-    document.title = 'Kinopio – Spatial Thinking'
+    document.title = 'dreemurr – Spatial Thinking'
   }
 })
 
@@ -78,12 +78,12 @@ AboutJsonLd
           muted
           playsinline
           poster="https://updates.kinopio.club/pages/about/hero/1.webp"
-          aria-label="Kinopio overview: Click and type anywhere to add cards, drag cards, drag between connectors to connect, play embeds, paint over cards to bulk edit."
+          aria-label="dreemurr overview: Click and type anywhere to add cards, drag cards, drag between connectors to connect, play embeds, paint over cards to bulk edit."
           width="715"
           height="511"
         )
           source(src="https://updates.kinopio.club/pages/about/hero/1.webm")
-        p Kinopio is a note-taking canvas for collecting and connecting your thoughts, ideas, and plans by yourself or collaboratively. Community-funded and{{' '}}
+        p dreemurr is a note-taking canvas for collecting and connecting your thoughts, ideas, and plans by yourself or collaboratively. Community-funded and{{' '}}
           a(href="https://pketh.org/organic-software.html") built for the long-term
           span .
         p Free for 100 cards. No sign up required. No ads or AI crap.
@@ -91,7 +91,7 @@ AboutJsonLd
         //- cta
         .button-wrap
           router-link(to="/app")
-            button.success Open Kinopio
+            button.success Open dreemurr
 
       AboutHowTo
 
@@ -109,12 +109,12 @@ AboutJsonLd
         //- cta
         .button-wrap
           router-link(to="/app")
-            button.success Open Kinopio
+            button.success Open dreemurr
 
       section.about-me
         p Hi I'm{{' '}}
           a(href="https://pketh.org/about") Piri
-          span , a designer, engineer, and tool-maker. I started Kinopio in 2018 to help people{{' '}}
+          span , a designer, engineer, and tool-maker. I started dreemurr in 2018 to help people{{' '}}
           a(href="https://pketh.org/dream-of-being-understood.html") understand each other
           span , and themselves.
         p Previously, I was the co-creator and designer of {{' '}}
@@ -122,8 +122,8 @@ AboutJsonLd
           span .
         p If you're curious, I wrote{{' '}}
           a(href="https://pketh.org/how-kinopio-is-made.html")
-            span How Kinopio is Made
-          span . I hope you enjoy using Kinopio and find it invaluable,
+            span How dreemurr is Made
+          span . I hope you enjoy using dreemurr and find it invaluable,
         img.icon.signature(width="70" height="36" src="https://updates.kinopio.club/pages/about/signature.png" alt="signature")
         .row
           a(href="mailto:hi@kinopio.club") piri@kinopio.club

@@ -4,7 +4,6 @@ import { reactive, computed, onMounted, onBeforeUnmount, watch, ref, nextTick } 
 import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 
 import TagList from '@/components/TagList.vue'
 import utils from '@/utils.js'
@@ -13,7 +12,6 @@ import cache from '@/cache.js'
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 
 const props = defineProps({
   visible: Boolean,

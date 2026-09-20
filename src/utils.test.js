@@ -141,6 +141,63 @@ describe('urlsFromString', () => {
     const result = utils.urlsFromString(input)
     expect(result).toEqual(['https://example.com/'])
   })
+
+  it('extracts a data image URL', () => {
+    const dataUrl = 'data:image/png;base64,iVBORw0KGgo='
+    const result = utils.urlsFromString(`yarr ${dataUrl}`)
+    expect(result).toEqual([dataUrl])
+  })
+})
+
+describe('urlIsImage', () => {
+  it('treats data image URLs as images', () => {
+    expect(utils.urlIsImage('data:image/png;base64,iVBORw0KGgo=')).toBe(true)
+  })
+})
+
+describe('urlIsGif', () => {
+  it('detects gif data URLs', () => {
+    expect(utils.urlIsGif('data:image/gif;base64,R0lGODlhAQABAAAAACw=')).toBe(true)
+  })
+
+  it('detects gif file URLs', () => {
+    expect(utils.urlIsGif('https://cdn.example.com/yarr.gif')).toBe(true)
+  })
+
+  it('ignores still images', () => {
+    expect(utils.urlIsGif('data:image/png;base64,iVBORw0KGgo=')).toBe(false)
+  })
+})
+
+describe('fileFromClipboardEvent', () => {
+  const fileOf = (type, name) => new File(['x'], name, { type })
+  const itemOf = (file) => ({
+    type: file.type,
+    getAsFile: () => file
+  })
+
+  it('prefers a gif when the clipboard also has a png snapshot', () => {
+    const gif = fileOf('image/gif', 'yarr.gif')
+    const png = fileOf('image/png', 'yarr.png')
+    const event = {
+      clipboardData: {
+        files: [png, gif],
+        items: [itemOf(png), itemOf(gif)]
+      }
+    }
+    expect(utils.fileFromClipboardEvent(event)).toBe(gif)
+  })
+
+  it('falls back to the first image when no gif is present', () => {
+    const png = fileOf('image/png', 'still.png')
+    const event = {
+      clipboardData: {
+        files: [png],
+        items: [itemOf(png)]
+      }
+    }
+    expect(utils.fileFromClipboardEvent(event)).toBe(png)
+  })
 })
 
 describe('urlWithoutQueryString', () => {
@@ -200,10 +257,10 @@ describe('isCompositionKeyboardEvent', () => {
   it('ignores a normal enter keypress', () => {
     composition('compositionstart')
     composition('compositionend')
-    const event = enterKeydown()
-    // simulate time passing since the last composition
-    Object.defineProperty(event, 'timeStamp', { value: 999999 })
-    expect(utils.isCompositionKeyboardEvent(event)).toBe(false)
+    const now = Date.now()
+    vi.spyOn(Date, 'now').mockReturnValue(now + 1000)
+    expect(utils.isCompositionKeyboardEvent(enterKeydown())).toBe(false)
+    vi.restoreAllMocks()
   })
 
   it('detects the enter that confirms IME input in chromium and firefox', () => {
@@ -224,5 +281,14 @@ describe('isCompositionKeyboardEvent', () => {
     composition('compositionend')
     // safari keydown has isComposing false, but arrives in the same tick
     expect(utils.isCompositionKeyboardEvent(enterKeydown())).toBe(true)
+  })
+
+  it('detects enter shortly after hangul syllable compositionend', () => {
+    composition('compositionstart')
+    composition('compositionend')
+    const now = Date.now()
+    vi.spyOn(Date, 'now').mockReturnValue(now + 80)
+    expect(utils.isCompositionKeyboardEvent(enterKeydown())).toBe(true)
+    vi.restoreAllMocks()
   })
 })

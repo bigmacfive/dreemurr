@@ -24,6 +24,7 @@ watch(() => globalStore.isLoadingSpace, (value) => {
     //- logo
     img.icon(src="@/assets/logos/logo-hover.png")
     img.icon(src="@/assets/logos/logo-active.png")
+    img.icon(src="@/assets/dreemurr/loader-sheet.png")
 
     //- frames
     img(src="@/assets/frames/garden-leaves/flower.webp")
@@ -127,7 +128,6 @@ watch(() => globalStore.isLoadingSpace, (value) => {
     img.icon(src="@/assets/rss.svg")
     img.icon(src="@/assets/search.svg")
     img.icon(src="@/assets/settings.svg")
-    img.icon(src="@/assets/share.svg")
     img.icon(src="@/assets/sidebar.svg")
     img.icon(src="@/assets/sign-out.svg")
     img.icon(src="@/assets/size-small.svg")
@@ -136,7 +136,6 @@ watch(() => globalStore.isLoadingSpace, (value) => {
     img.icon(src="@/assets/split-vertically.svg")
     img.icon(src="@/assets/split.svg")
     img.icon(src="@/assets/stats.svg")
-    img.icon(src="@/assets/sticker.svg")
     img.icon(src="@/assets/sunglasses.svg")
     img.icon(src="@/assets/star.svg")
     img.icon(src="@/assets/system.svg")

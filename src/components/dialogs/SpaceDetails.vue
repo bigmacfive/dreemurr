@@ -4,7 +4,6 @@ import { reactive, computed, onMounted, onBeforeUnmount, watch, ref, nextTick } 
 import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useGroupStore } from '@/stores/useGroupStore'
 
 import cache from '@/cache.js'
@@ -21,7 +20,6 @@ import dayjs from 'dayjs'
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 const groupStore = useGroupStore()
 
 const maxIterations = 30
@@ -251,32 +249,6 @@ const shouldSortByGroups = computed(() => {
   const value = dialogSpaceFilterSortBy.value
   return value === 'groups'
 })
-const prependFavoriteSpaces = (spaces) => {
-  const favoriteSpaces = []
-  const otherSpaces = []
-  spaces.forEach(space => {
-    const isFavorite = spaceStore.getSpaceIsFavorite(space.id)
-    if (isFavorite) {
-      favoriteSpaces.push(space)
-    } else {
-      otherSpaces.push(space)
-    }
-  })
-  return favoriteSpaces.concat(otherSpaces)
-}
-const prependInboxSpaces = (spaces) => {
-  const inboxSpaces = []
-  const otherSpaces = []
-  spaces.forEach(space => {
-    const isInbox = space.name === 'Inbox'
-    if (isInbox) {
-      inboxSpaces.push(space)
-    } else {
-      otherSpaces.push(space)
-    }
-  })
-  return inboxSpaces.concat(otherSpaces)
-}
 const sort = (spaces) => {
   if (shouldSortByCreatedAt.value) {
     spaces = utils.sortByCreatedAt(spaces)
@@ -289,8 +261,6 @@ const sort = (spaces) => {
   } else {
     spaces = utils.sortByUpdatedAt(spaces)
   }
-  spaces = prependFavoriteSpaces(spaces)
-  spaces = prependInboxSpaces(spaces)
   return spaces
 }
 
@@ -326,27 +296,7 @@ const updateLocalSpaces = async () => {
   state.spaces = cacheSpaces
 }
 const updateWithRemoteSpaces = async () => {
-  const currentUserIsSignedIn = userStore.getUserIsSignedIn
-  const isOffline = computed(() => !globalStore.isOnline)
-  if (!currentUserIsSignedIn || isOffline.value) { return }
-  try {
-    state.isLoadingRemoteSpaces = true
-    const [userSpaces, groupSpaces] = await Promise.all([
-      apiStore.getUserSpaces(),
-      apiStore.getUserGroupSpaces()
-    ])
-    let spaces = userSpaces || []
-    if (groupSpaces) {
-      spaces = spaces.concat(groupSpaces)
-    }
-    spaces = spaces.filter(space => Boolean(space))
-    spaces = uniqBy(spaces, 'id')
-    state.spaces = spaces
-    await updateCachedSpacesWithRemoteSpaces(spaces)
-  } catch (error) {
-    console.error('🚒 updateWithRemoteSpaces', error)
-  }
-  state.isLoadingRemoteSpaces = false
+
 }
 const updateCachedSpacesWithRemoteSpaces = async (remoteSpaces) => {
   try {

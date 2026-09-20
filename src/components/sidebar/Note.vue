@@ -167,11 +167,7 @@ section.note(v-if="visible" :style="styles")
       img.icon.copy(src="@/assets/copy.svg")
       span Copy
 
-  section.subsection(v-if="!isSignedIn")
-    p
-      span.badge.info Sign Up or In
-      span to write private notes for this space
-    button(@click.left="triggerSignUpOrInIsVisible") Sign Up or In
+  section.subsection(v-if="false")
   section.subsection(v-else-if="!isSpaceMember")
     p Only members of this space can write private notes
 

@@ -6,7 +6,7 @@ import { useCardStore } from '@/stores/useCardStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useBoxStore } from '@/stores/useBoxStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
+import cache from '@/cache.js'
 
 import OfflineBadge from '@/components/OfflineBadge.vue'
 import TaskFilters from '@/components/dialogs/TaskFilters.vue'
@@ -19,7 +19,6 @@ const globalStore = useGlobalStore()
 const boxStore = useBoxStore()
 const cardStore = useCardStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 const userStore = useUserStore()
 
 let unsubscribes
@@ -175,7 +174,7 @@ const updateItemsBySpace = async () => {
     state.isLoading = true
     state.isError = false
     if (!itemsBySpace.value) {
-      globalStore.sidebarTasksItemsBySpace = await apiStore.getUserTodos()
+      globalStore.sidebarTasksItemsBySpace = await cache.getTodosBySpace()
     }
     // update items
     globalStore.sidebarTasksItemsBySpace.forEach(space => {
@@ -280,10 +279,7 @@ const itemsRemainingCount = computed(() => {
         button(:class="{ active: !scopeIsCurrentSpace }" @click="updateScopeIsCurrentSpace(false)")
           span All Spaces
 
-    section.subsection(v-if="!currentUserIsSignedIn && !scopeIsCurrentSpace")
-      .row.badge.info
-        span Sign Up or In to search your spaces
-      button(@click.left="triggerSignUpOrInIsVisible") Sign Up or In
+    section.subsection(v-if="false")
 
     //- error
     .badge.error-badge.danger(v-if="state.isError")

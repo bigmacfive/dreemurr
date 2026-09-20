@@ -7,15 +7,15 @@ section.faq
   h2 FAQ
 
   details
-    summary How does Kinopio compare to Miro, Milanote, Whimsical, and other whiteboard apps?
+    summary How does dreemurr compare to Miro, Milanote, Whimsical, and other whiteboard apps?
     section.subsection
       p Physical whiteboards are so productive because drawing and writing with markers is a naturally messy, chaotic process, which produces novel new ideas and shared understanding.
       p But the typical software whiteboard is designed around neatness and conformity. Expressiveness and personality is replaced with a maze through endless toolbars and sticky notes in one of five designer-approved pastel shades.
-      p Taking a different approach, Kinopio's just-click-and-type design and visual customizability is designed to encourage creativity and experimentation.
+      p Taking a different approach, dreemurr's just-click-and-type design and visual customizability is designed to encourage creativity and experimentation.
       p Like a physical whiteboard, the outputs produced this way tend to be{{' '}}
         a(href="https://uxdesign.cc/low-fidelity-design-is-higher-up-the-value-chain-fdf1824c6aa1") lower-fidelity
         span {{' '}}and conceptual – ideal for problem solving, and for turning debates into discussions.
-      p The other major difference is that Kinopio is{{' '}}
+      p The other major difference is that dreemurr is{{' '}}
         a(href="https://pketh.org/organic-software.html") organic software
         span , paid for by the people who use it, rather than by VC investors looking for an{{' '}}
         a(href="https://ourincrediblejourney.tumblr.com/") easy exit
@@ -44,17 +44,17 @@ section.faq
             td Whimsical
             td $30,000,000 Series A
           tr
-            td.badge.info Kinopio
+            td.badge.info dreemurr
             td.badge.info $0
-      p The result? Kinopio is a product that embraces individuality and personality. Made for people, not drones.
+      p The result? dreemurr is a product that embraces individuality and personality. Made for people, not drones.
       p To see how this plays out IRL, here's a video by a customer comparing{{' '}}
-        a(href="https://www.youtube.com/watch?v=Colow9UCPqM") Kinopio vs Milanote
+        a(href="https://www.youtube.com/watch?v=Colow9UCPqM") dreemurr vs Milanote
         span .
 
   details
-    summary Why doesn't Kinopio have AI features?
+    summary Why doesn't dreemurr have AI features?
     section.subsection
-      p Because Kinopio is solely supported by the people who love it, I have the insane privilege of being able to only add features that fit into the product and truly help its users.
+      p Because dreemurr is solely supported by the people who love it, I have the insane privilege of being able to only add features that fit into the product and truly help its users.
       p
         span With whiteboarding, mind-mapping, or mood-boarding, it's{{' '}}
           strong the journey
@@ -82,24 +82,24 @@ section.faq
       //-   span .
 
   details
-    summary Will Kinopio still be around years from now?
+    summary Will dreemurr still be around years from now?
     section.subsection
       p
-        span Kinopio started in 2019 and my answer to this question is the same as it was{{' '}}
+        span dreemurr started in 2019 and my answer to this question is the same as it was{{' '}}
         a(href="https://pketh.org/kinopio-plans.html") back then
         span .
       //- p
-      //-   span You're about to put years of your life into Kinopio so my answer to this question is the same as it was back in 2019.
+      //-   span You're about to put years of your life into dreemurr so my answer to this question is the same as it was back in 2019.
       p
-        span Kinopio consists of two codebases, the{{' '}}
+        span dreemurr consists of two codebases, the{{' '}}
         span.badge.info client
         span app that runs in your browser, and the{{' '}}
         span.badge.info server
         span app which enables sharing and collaboration. The client app is like a cockroach, it’s tiny, free to host,{{' '}}
         a(href="https://github.com/kinopio-club/kinopio-client") the code is public
-        span , and doesn’t depend on a connection to the server app. The server is also pint-sized and cheap to run indefinetely. But even if the server dies you can continue to use Kinopio as you do now – with all your data intact.
+        span , and doesn’t depend on a connection to the server app. The server is also pint-sized and cheap to run indefinetely. But even if the server dies you can continue to use dreemurr as you do now – with all your data intact.
       p
-        a(href="https://kinopio.club/kinopio-architecture-and-costs-JOGXFJ0FEMpS3crbh6U9k") Kinopio Architecture and Costs
+        a(href="https://kinopio.club/kinopio-architecture-and-costs-JOGXFJ0FEMpS3crbh6U9k") dreemurr Architecture and Costs
 
 </template>
 

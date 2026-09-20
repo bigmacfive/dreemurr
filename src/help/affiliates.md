@@ -1,6 +1,6 @@
 ---
 title: Affiliate Program
-description: "If you're a genuine user and fan of Kinopio, and you happen to an established (or semi-established) Youtube or TikTok creator, or you write for a publication, you may be eligible to join the Kinopio Affiliate Program."
+description: "If you're a genuine user and fan of dreemurr, and you happen to an established (or semi-established) Youtube or TikTok creator, or you write for a publication, you may be eligible to join the dreemurr Affiliate Program."
 category: Community
 updated: 2026-09-03
 image: https://updates.kinopio.club/pages/help/posts/affiliate/1.webp
@@ -8,14 +8,14 @@ image: https://updates.kinopio.club/pages/help/posts/affiliate/1.webp
 
 # Affiliate Program
 
-If you're a genuine user and fan of Kinopio, and you happen to an established (or semi-established) Youtube or TikTok creator (or you write for a publication), you may be eligible to join the Kinopio Affiliate Program.
+If you're a genuine user and fan of dreemurr, and you happen to an established (or semi-established) Youtube or TikTok creator (or you write for a publication), you may be eligible to join the dreemurr Affiliate Program.
 
 Being an affiliate is a win/win. You'll get a personalized referral URL (`kinopio.club/from/you`) and earn commissions, and your audience will get a discount.
 
 For more details and how to sign up see the [Affiliate Program space](https://kinopio.club/kinopio-affiliate-program-YNmS6C3fofN3R9mYgO1Bu)
 
 <img src="https://updates.kinopio.club/pages/help/posts/affiliate/1.webp" alt="So you're interested in
-becoming a Kinopio
+becoming a dreemurr
 Affiliate?" class="small">
 ## Affiliate Dashboard
 

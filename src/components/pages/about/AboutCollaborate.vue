@@ -141,9 +141,9 @@ section.for-work
     //- p
     //-   em If only
     //-   span {{' '}}projects could go straight from A to B. Every technical issue would be anticipated. Clients would never change their minds. The new feature would be as intuitive as it seemed in the mockup…
-    //- p Kinopio is designed for real-world collaborative projects where teams need to be able to iterate and adapt to new information as they build.
+    //- p dreemurr is designed for real-world collaborative projects where teams need to be able to iterate and adapt to new information as they build.
     p Capture and connect ideas together, build them up into plans, kanban lists, and tasks assigned to team-mates.
-    p When projects are planned and tracked in Kinopio, teamwork becomes more effective and meetings get shorter (or cut altogether).
+    p When projects are planned and tracked in dreemurr, teamwork becomes more effective and meetings get shorter (or cut altogether).
     figure
       .button-wrap.play-button-wrap.badge.secondary(@click="toggleVideoIsPaused")
         button.small-button(title="Pause or Play Video")
@@ -154,7 +154,7 @@ section.for-work
         loop
         muted
         playsinline
-        aria-label="multiple people collaborating on the same space in Kinopio. Cards are moved, added to lists, and moved into boxes."
+        aria-label="multiple people collaborating on the same space in dreemurr. Cards are moved, added to lists, and moved into boxes."
         ref="videoElement"
         poster="https://updates.kinopio.club/pages/about/at-work/1.webp"
       )

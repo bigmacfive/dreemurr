@@ -3,6 +3,11 @@
 const env = import.meta.env
 
 export default {
+  appName: 'dreemurr',
+  accent: '#E85D04',
+  accentHover: '#FF7A1A',
+  accentActive: '#C44D00',
+  accentSoft: '#FFD4A8',
   spaceZoom: {
     max: 300,
     min: 20,
@@ -42,7 +47,7 @@ export default {
   isSecureAppContext: navigator.isSecureAppContext, // true = iOS app
   cdnHost: 'https://cdn.kinopio.club',
   imgproxyHost: 'https://img.kinopio.club',
-  defaultSpaceBackground: 'https://bk.kinopio.club/squiggle-background-2x.png',
+  defaultSpaceBackground: '/background-2x.png',
   moderatorUserId: 'euGhpBrR9eBcjKnK16C_g',
   uploadPlaceholder: '⬬⬭',
   itemTypesWithPositions: ['boxes', 'cards', 'lists', 'lines'],
@@ -62,6 +67,13 @@ export default {
       return false
     } else {
       return (env.MODE === 'development')
+    }
+  },
+  isTauri () {
+    try {
+      return Boolean(window.__TAURI_INTERNALS__)
+    } catch (error) {
+      return false
     }
   },
   kinopioDomain () {

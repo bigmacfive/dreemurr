@@ -14,7 +14,7 @@ By default, whenever a collaborator (or anyone in your open spaces) adds a card 
 
 ## When Notifications are Emailed
 
-When you view your notifications in Kinopio, those notifications will be marked as read. Every 10 minutes, the system collects all the notifications that haven't been read and sends you an email about them.
+When you view your notifications in dreemurr, those notifications will be marked as read. Every 10 minutes, the system collects all the notifications that haven't been read and sends you an email about them.
 
 
 <img src="https://files.kinopio.club/notifications-email.png" class="medium"/>

@@ -3,7 +3,6 @@ import router from './router'
 import { ViteSSG } from 'vite-ssg'
 
 import { createPinia } from 'pinia'
-import webSocketPlugin from './stores/plugins/webSocketPlugin'
 import { useUserStore } from './stores/useUserStore'
 
 import './assets/main.styl'
@@ -17,13 +16,14 @@ export const createApp = ViteSSG(
   // function to have custom setups
   async ({ app, router, isClient, initialState }) => {
     const pinia = createPinia()
-    pinia.use(webSocketPlugin())
 
     app.use(pinia)
 
     if (isClient) {
       const userStore = useUserStore()
-      await userStore.initializeUser()
+      userStore.initializeUser().catch((error) => {
+        console.error('🚒 initializeUser', error)
+      })
     }
   }
 )

@@ -32,7 +32,7 @@ Download for:
 
 ## SMS, Telegram, Zapier and more Integrations
 
-Kinopio is also supported by [phonetonote](https://phonetonote.com/), which lets you add cards to your inbox via SMS, Telegram, Zapier, Email, Alfred, and more. API keys saved to phonetonote are encrypted and your messages are never stored there.
+dreemurr is also supported by [phonetonote](https://phonetonote.com/), which lets you add cards to your inbox via SMS, Telegram, Zapier, Email, Alfred, and more. API keys saved to phonetonote are encrypted and your messages are never stored there.
 
 ## Pro-Tips
 

@@ -5,7 +5,6 @@ import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
 import { useGroupStore } from '@/stores/useGroupStore'
-import { useApiStore } from '@/stores/useApiStore'
 
 import utils from '@/utils.js'
 import GroupList from '@/components/GroupList.vue'
@@ -19,7 +18,6 @@ const globalStore = useGlobalStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
 const groupStore = useGroupStore()
-const apiStore = useApiStore()
 
 const dialogElement = ref(null)
 let unsubscribes

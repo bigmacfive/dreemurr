@@ -27,3 +27,19 @@ yarn-error.log*
 
 # Local HTTPS certs (mkcert)
 /.cert
+
+# Tauri
+src-tauri/target
+src-tauri/gen
+
+# Icon/chroma working files
+src/assets/dreemurr/*chroma*
+src/assets/dreemurr/src/*chroma*
+src/assets/dreemurr/src/head-*
+src/assets/dreemurr/src/kinopio-logo*
+src/assets/dreemurr/src/mark-silhouette.pbm
+src/assets/dreemurr/src/buddy-green.png
+src/assets/dreemurr/src/date-buddy-chroma.jpg
+src/assets/dreemurr/frames
+src-tauri/icons/icon-preview-256.png
+*.dmg

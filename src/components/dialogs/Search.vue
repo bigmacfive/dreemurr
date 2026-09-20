@@ -5,13 +5,13 @@ import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useCardStore } from '@/stores/useCardStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 
 import ResultsFilter from '@/components/ResultsFilter.vue'
 import SearchFilters from '@/components/SearchFilters.vue'
 import CardList from '@/components/CardList.vue'
 import SpaceCardList from '@/components/SpaceCardList.vue'
 import utils from '@/utils.js'
+import cache from '@/cache.js'
 
 import dayjs from 'dayjs'
 import orderBy from 'lodash-es/orderBy'
@@ -20,7 +20,6 @@ const globalStore = useGlobalStore()
 const cardStore = useCardStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 
 const dialogElement = ref(null)
 const resultsElement = ref(null)
@@ -110,7 +109,7 @@ const updateSearch = async (search) => {
 }
 const searchRemoteCards = async (search) => {
   state.isLoading = true
-  const results = await apiStore.searchCards({ query: search })
+  const results = await cache.searchCards(search)
   const ids = results.map(result => result.id)
   state.searchResultsRemoteCards = results
   globalStore.searchResultsCardIds = ids

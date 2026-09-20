@@ -167,7 +167,10 @@ export default defineConfig(async ({ command, mode }) => {
         registerType: 'autoUpdate',
         strategies: 'generateSW',
         manifest: {
-          start_url: '/app'
+          start_url: '/app',
+          name: 'dreemurr',
+          short_name: 'dreemurr',
+          theme_color: '#E85D04'
         },
         workbox: {
           navigateFallback: '/app.html',
@@ -216,12 +219,16 @@ export default defineConfig(async ({ command, mode }) => {
     },
     server: {
       port: 8080,
+      strictPort: true,
       host: '0.0.0.0',
       fs: {
         // Allow serving files from one level up to the project root
         allow: ['..']
       },
-      https: httpsConfig
+      https: httpsConfig,
+      watch: {
+        ignored: ['**/src-tauri/**']
+      }
     },
     build: {
       // generates and deploys .map files

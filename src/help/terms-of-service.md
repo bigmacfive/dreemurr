@@ -71,10 +71,10 @@ If you violate of any of the terms, we may terminate your account. That’s a br
 1. Your use of the Services is at your sole risk. We provide these Services on an “as is” and “as available” basis. We do not offer service-level agreements for most of our Services – but do take uptime of our applications seriously.
 2. We reserve the right to temporarily disable your account if your usage significantly exceeds the average usage of other customers of the Services. Of course, we’ll reach out to the account owner before taking any action except in rare cases where the level of use may negatively impact the performance of the Service for other customers.
 3. We take many measures to protect and secure your data through backups, redundancies, and encryption. We enforce encryption for data transmission from the public Internet.
-4. When you use our Services, you entrust us with your data. We take that trust to heart. You agree that Kinopio may process your data as described in our Privacy Policy and for no other purpose. We can access your data for the following reasons:
+4. When you use our Services, you entrust us with your data. We take that trust to heart. You agree that dreemurr may process your data as described in our Privacy Policy and for no other purpose. We can access your data for the following reasons:
     - To help you with support requests you make. We’ll ask for express consent before accessing your account.
     - To find public spaces that would be interesting to others to show in Explore. Owners of those spaces will be sent an email asking them if they would be interested in adding their space to Explore. Private spaces are never accessed without explicit owner consent.
-    - To safeguard Kinopio. We’ll look at logs and metadata as part of our work to ensure the security of your data and the Services as a whole. If necessary, we may also access accounts as part of an abuse report investigation.
+    - To safeguard dreemurr. We’ll look at logs and metadata as part of our work to ensure the security of your data and the Services as a whole. If necessary, we may also access accounts as part of an abuse report investigation.
 5. We use third party vendors and hosting partners to provide the necessary hardware, software, networking, storage, and related technology required to run the Services. The subprocessors are:
 
     - [Heroku](https://devcenter.heroku.com/articles/security-privacy-compliance) Cloud hosting and database.

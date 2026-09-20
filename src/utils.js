@@ -31,14 +31,18 @@ let tlds = tldsList.join(String.raw`)|(\.`)
 tlds = String.raw`(\.` + tlds + ')'
 
 let isComposionEvent = false
-let compositionEventEndTime = 0
+let compositionEndedAt = 0
+// Hangul completes a syllable on every compositionend. Safari/Chrome then
+// sometimes deliver the confirming Enter on the next tick with isComposing false.
+const compositionGraceMs = 250
 if (typeof window !== 'undefined') {
   window.addEventListener('compositionstart', () => {
     isComposionEvent = true
+    compositionEndedAt = 0
   })
-  window.addEventListener('compositionend', (event) => {
+  window.addEventListener('compositionend', () => {
     isComposionEvent = false
-    compositionEventEndTime = event.timeStamp
+    compositionEndedAt = Date.now()
   })
 }
 
@@ -572,15 +576,15 @@ export default {
       return event.touches.length > 1
     }
   },
-  // non-latin (IME) input for japanese kanji
+  // IME input (Hangul, Japanese, Chinese). Hangul ends composition after
+  // every syllable, so a short grace period is required after compositionend.
   isCompositionKeyboardEvent (event) {
     if (isComposionEvent) { return true }
     if (event.isComposing) { return true }
     // older chromium and android fallback
     if (event.keyCode === 229) { return true }
-    // safari fallback
-    if (compositionEventEndTime && event.timeStamp) {
-      return Math.abs(event.timeStamp - compositionEventEndTime) < 100
+    if (compositionEndedAt && (Date.now() - compositionEndedAt) < compositionGraceMs) {
+      return true
     }
     return false
   },
@@ -2345,6 +2349,7 @@ export default {
       })
     }
     string = this.removeMarkdownCodeblocksFromString(string)
+    const dataImageUrls = string.match(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+/g) || []
     // matches multiple urls and returns [urls]
     // https://regexr.com/59m5t
     // start, newline, or space
@@ -2356,7 +2361,7 @@ export default {
     const urlPattern = new RegExp(/(^|\n| )(http[s]?:\/\/)[^\s(["<>]{1,}(\.|(:[0-9]+))[^\s."><]+[\w=.!]+\/?-?/igm)
     const localhostUrls = string.match(this.localhostUrlPattern()) || []
     let urls = string.match(urlPattern) || []
-    urls = urls.concat(localhostUrls)
+    urls = urls.concat(localhostUrls, dataImageUrls)
     urls = urls.filter(url => Boolean(url))
     if (!urls.length) { return }
     // filter out empty or non-urls
@@ -2382,7 +2387,7 @@ export default {
   urlHasProtocol (url) {
     if (!url) { return }
     url = url.toLowerCase()
-    return url.startsWith('http://') || url.startsWith('https://')
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')
   },
   urlWithoutProtocol (url) {
     let newUrl
@@ -2404,6 +2409,7 @@ export default {
   },
   urlIsImage (url) {
     if (!url) { return }
+    if (url.startsWith('data:image/')) { return true }
     // append space to match as an end character
     url = url + ' '
     // https://regexr.com/6dv93
@@ -2693,13 +2699,53 @@ export default {
     }
     return file.size > sizeLimit
   },
-  async dataFromClipboard () {
+  isGifFile (file) {
+    if (!file) { return }
+    const type = (file.type || '').toLowerCase()
+    const name = (file.name || '').toLowerCase()
+    return type === 'image/gif' || name.endsWith('.gif')
+  },
+  urlIsGif (url) {
+    if (!url) { return }
+    const value = url.toLowerCase()
+    return value.includes('image/gif') || value.includes('.gif')
+  },
+  fileFromClipboardItems (items) {
+    if (!items?.length) { return }
+    const list = Array.from(items)
+    const gifItem = list.find(item => item.type === 'image/gif')
+    if (gifItem?.getAsFile) { return gifItem.getAsFile() }
+    const imageItem = list.find(item => item.type?.startsWith('image/'))
+    if (imageItem?.getAsFile) { return imageItem.getAsFile() }
+  },
+  fileFromClipboardFiles (files) {
+    if (!files?.length) { return }
+    const list = Array.from(files)
+    return list.find(file => this.isGifFile(file)) || list.find(file => file.type?.startsWith('image/'))
+  },
+  fileFromClipboardEvent (event) {
+    const clipboard = event?.clipboardData
+    if (!clipboard) { return }
+    return this.fileFromClipboardFiles(clipboard.files) || this.fileFromClipboardItems(clipboard.items)
+  },
+  async dataFromClipboard (event) {
     let text, file
+    file = this.fileFromClipboardEvent(event)
+    if (file) {
+      return { text, file }
+    }
+    const clipboard = event?.clipboardData
+    if (clipboard) {
+      text = clipboard.getData('text/plain') || undefined
+      if (text) {
+        return { text, file }
+      }
+    }
     const items = await navigator.clipboard.read()
     console.info('🎊 dataFromClipboard', items)
     for (const item of items) {
       const imageMatch = 'image/'
-      const imageType = item.types.find(type => {
+      const imageType = item.types.find(type => type === 'image/gif') || item.types.find(type => {
         if (!type) { return }
         return type.includes(imageMatch)
       })
@@ -2708,12 +2754,10 @@ export default {
         let index = imageType.indexOf(imageMatch)
         index = index + imageMatch.length
         const extension = imageType.substring(index)
-        file = new File([blob], `pasted.${extension}`)
-      } else {
-        if (item.types.includes('text/plain')) {
-          const blob = await item.getType('text/plain')
-          text = await blob.text()
-        }
+        file = new File([blob], `pasted.${extension}`, { type: imageType })
+      } else if (!file && item.types.includes('text/plain')) {
+        const blob = await item.getType('text/plain')
+        text = await blob.text()
       }
     }
     if (text == null && file == null) {

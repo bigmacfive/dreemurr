@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 import { useGlobalStore } from '@/stores/useGlobalStore'
 
@@ -51,13 +50,11 @@ export const useItemStore = defineStore('items', {
       this.allIds.push(item.id)
     },
     async createItem (item) {
-      const apiStore = useApiStore()
       // const broadcastStore = useBroadcastStore()
       // normalize item
       this.addItemToState(item)
       // if (updates.isFromBroadcast) { return }
       // broadcastStore.update({ updates: item, store: 'itemStore', action: 'createItem' })
-      await apiStore.addToQueue({ name: 'createItem', body: item })
     },
 
     // update
@@ -78,7 +75,6 @@ export const useItemStore = defineStore('items', {
     // remove
 
     async removeItems (items) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const canEditSpace = userStore.getUserCanEditSpace
       if (!canEditSpace) { return }
@@ -86,7 +82,6 @@ export const useItemStore = defineStore('items', {
         const idIndex = this.allIds.indexOf(item.id)
         this.allIds.splice(idIndex, 1)
         delete this.byId[item.id]
-        await apiStore.addToQueue({ name: 'removeItem', body: item })
       }
     },
     async removeItem (item) {

@@ -31,7 +31,7 @@ section.how-to
     .row
       .side.left
         h3 Paint Select to Edit Multiple
-        p Drag from an empty area to paint over items you want to move or edit them together. First-class bulk edits are one of Kinopio's most powerful features.
+        p Drag from an empty area to paint over items you want to move or edit them together. First-class bulk edits are one of dreemurr's most powerful features.
 
       .side.right
         video(

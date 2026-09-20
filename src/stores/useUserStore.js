@@ -4,18 +4,14 @@ import { defineStore } from 'pinia'
 import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useUserNotificationStore } from '@/stores/useUserNotificationStore'
-import { useGroupStore } from '@/stores/useGroupStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 import { useThemeStore } from '@/stores/useThemeStore'
 
 import utils from '@/utils.js'
 import consts from '@/consts.js'
 import cache from '@/cache.js'
-import postMessage from '@/postMessage.js'
 
-import randomColor from 'randomcolor'
 import { nanoid } from 'nanoid'
 import uniqBy from 'lodash-es/uniqBy'
 import dayjs from 'dayjs'
@@ -26,7 +22,7 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     id: nanoid(),
     lastSpaceId: '',
-    color: randomColor({ luminosity: 'light' }),
+    color: consts.accent,
     name: undefined,
     description: undefined,
     website: undefined,
@@ -121,12 +117,10 @@ export const useUserStore = defineStore('user', {
       return utils.userMeta(this.getUserAllState, spaceStore.getSpaceAllState)
     },
     getUserIsSignedIn () {
-      return Boolean(this.apiKey)
+      return true
     },
     getUserCardsCreatedIsOverLimit () {
-      const freeCardsCreatedLimit = consts.freeCardsCreatedLimit
-      if (this.isUpgraded) { return }
-      if (this.cardsCreatedCount >= freeCardsCreatedLimit) { return true }
+      return false
     },
     getShouldPreventCardsCreatedCountUpdate () {
       const spaceStore = useSpaceStore()
@@ -147,10 +141,7 @@ export const useUserStore = defineStore('user', {
       return userFilters + tagNames.length + connections.length + frames.length + boxes.length
     },
     getUserIsUnableToEditUnlessSignedIn () {
-      const spaceStore = useSpaceStore()
-      const spaceIsOpen = spaceStore.privacy === 'open'
-      const isSignedIn = Boolean(this.apiKey)
-      return !isSignedIn && spaceIsOpen
+      return false
     },
     getUserIsSpaceCreator () {
       const spaceStore = useSpaceStore()
@@ -178,21 +169,12 @@ export const useUserStore = defineStore('user', {
       return this.drawingColor || this.color
     },
     getUserIsSpaceMember () {
-      const groupStore = useGroupStore()
-      const isSpaceUser = this.getUserIsSpaceUser
-      const isSpaceCollaborator = this.getUserIsSpaceCollaborator
-      const isGroupMember = groupStore.getIsCurrentSpaceGroupUser
-      return Boolean(isSpaceUser || isSpaceCollaborator || isGroupMember)
+      return true
     },
     getUserCanEditSpace () {
       const globalStore = useGlobalStore()
-      const spaceStore = useSpaceStore()
       if (globalStore.isEmbedMode) { return }
-      const spaceIsOpen = spaceStore.privacy === 'open'
-      const currentUserIsSignedIn = this.getUserIsSignedIn
-      const canEditOpenSpace = spaceIsOpen && currentUserIsSignedIn
-      const isSpaceMember = this.getUserIsSpaceMember
-      return canEditOpenSpace || isSpaceMember
+      return true
     },
     getUserSpacePermission () {
       const spaceStore = useSpaceStore()
@@ -223,13 +205,7 @@ export const useUserStore = defineStore('user', {
       return this.tags.find(tag => tag.name === name)
     },
     getUserIsOtherSpaceMember (space) {
-      const spaceStore = useSpaceStore()
-      const groupStore = useGroupStore()
-      space = space || spaceStore.getSpaceAllState
-      const isSpaceUser = this.getUserIsSpaceUser
-      const isSpaceCollaborator = this.getUserIsSpaceCollaborator
-      const isGroupMember = groupStore.getIsCurrentSpaceGroupUser
-      return Boolean(isSpaceUser || isSpaceCollaborator || isGroupMember)
+      return true
     },
     getUserCanEditBox (box) {
       const isSpaceMember = this.getUserIsSpaceMember
@@ -301,14 +277,10 @@ export const useUserStore = defineStore('user', {
     // init
 
     async initializeUserState (user) {
-      if (utils.userIsUpgraded(user)) {
-        user.isUpgraded = true
-      } else {
-        user.isUpgraded = false
-      }
-      if (user.apiKey) {
-        postMessage.send({ name: 'setApiKey', value: user.apiKey })
-      }
+      user.isUpgraded = true
+      user.apiKey = ''
+      user.theme = 'light'
+      user.themeIsSystem = false
       this.$state = user
       await cache.saveUser(user)
     },
@@ -322,7 +294,10 @@ export const useUserStore = defineStore('user', {
 
     async createNewUser () {
       console.info('🌸 Create new user')
-      this.themeIsSystem = true
+      this.theme = 'light'
+      this.themeIsSystem = false
+      this.apiKey = ''
+      this.isUpgraded = true
       this.appleAppAccountToken = self.crypto.randomUUID()
       if (utils.isMobile()) {
         this.shouldShowMinimap = false
@@ -331,68 +306,13 @@ export const useUserStore = defineStore('user', {
       cache.saveUser(allState)
     },
     async restoreRemoteUser () {
-      const apiStore = useApiStore()
-      const themeStore = useThemeStore()
-      if (!this.getUserIsSignedIn) { return }
-      const user = await apiStore.getUser()
-      if (!user) { return }
-      user.updatedAt = utils.unixTime(user.updatedAt)
-      console.info('🌸 Initialize user from remote', user)
-      this.initializeUserState(user)
-      themeStore.restoreTheme()
+
     },
     async restoreUserAssociatedData () {
-      const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
-      const groupStore = useGroupStore()
-      try {
-        globalStore.isLoadingFavorites = true
-        if (!this.getUserIsSignedIn) {
-          globalStore.isLoadingFavorites = false
-          return
-        }
-        const [favoriteSpaces, favoriteUsers, favoriteColors, hiddenSpaces, tags, groups] = await Promise.all([
-          apiStore.getUserFavoriteSpaces(),
-          apiStore.getUserFavoriteUsers(),
-          apiStore.getUserFavoriteColors(),
-          apiStore.getUserHiddenSpaces(),
-          apiStore.getUserTags(),
-          apiStore.getUserGroups()
-        ])
-        if (favoriteUsers) {
-          this.favoriteUsers = favoriteUsers
-        }
-        if (favoriteSpaces) {
-          this.favoriteSpaces = favoriteSpaces
-        }
-        if (favoriteColors) {
-          this.favoriteColors = favoriteColors
-        }
-        if (hiddenSpaces) {
-          this.hiddenSpaces = hiddenSpaces
-        }
-        if (tags) {
-          const newTags = uniqBy(tags, 'name')
-          this.tags = newTags
-        }
-        if (groups) {
-          groupStore.restoreGroup(groups)
-        }
-        globalStore.isLoadingFavorites = false
-      } catch (error) {
-        console.error('🚒 restoreUserAssociatedData', error)
-      }
+
     },
     checkIfShouldJoinGroup () {
-      const globalStore = useGlobalStore()
-      const groupStore = useGroupStore()
-      if (!globalStore.groupToJoinOnLoad) { return }
-      if (this.getUserIsSignedIn) {
-        groupStore.joinGroup()
-      } else {
-        globalStore.shouldNotifyIsJoiningGroup = false
-        globalStore.notifySignUpToJoinGroup = true
-      }
+
     },
     checkIfShouldApplyAffiliatePromo () {
       const globalStore = useGlobalStore()
@@ -407,16 +327,19 @@ export const useUserStore = defineStore('user', {
       const cachedUser = await cache.user()
       if (utils.objectHasKeys(cachedUser)) {
         console.info('🌸 Initialize user from cache', cachedUser.id)
+        cachedUser.apiKey = ''
+        cachedUser.theme = 'light'
+        cachedUser.themeIsSystem = false
+        cachedUser.isUpgraded = true
+        cachedUser.color = consts.accent
         this.updateUserState(cachedUser)
+        await cache.saveUser({ ...this.$state })
         themeStore.restoreTheme()
-        this.restoreRemoteUser()
-        this.restoreUserAssociatedData()
       } else {
         this.createNewUser()
         themeStore.restoreTheme()
       }
       globalStore.triggerUserIsLoaded()
-      this.checkIfShouldJoinGroup()
       this.updateUserDefaultTimezone()
       console.log('🍍 initializeUser', this.getUserAllState)
     },
@@ -441,17 +364,14 @@ export const useUserStore = defineStore('user', {
       spaceStore.updateCollaborator(user)
     },
     async updateUser (update) {
-      const apiStore = useApiStore()
       this.updateUserState(update)
       await cache.updateUser(update)
       this.broadcastUpdateUser(update)
-      await apiStore.addToQueue({ name: 'updateUser', body: update })
     },
 
     // favorites
 
     async updateUserFavoriteSpace (space, shouldAdd) {
-      const apiStore = useApiStore()
       const userNotificationStore = useUserNotificationStore()
       if (shouldAdd) {
         this.favoriteSpaces.push(space)
@@ -462,11 +382,9 @@ export const useUserStore = defineStore('user', {
         })
         userNotificationStore.removeFavoriteSpace(space)
       }
-      const body = { spaceId: space.id, value: shouldAdd }
-      await apiStore.addToQueue({ name: 'updateFavoriteSpace', body, spaceId: space.id })
+      await cache.updateUser({ favoriteSpaces: this.favoriteSpaces })
     },
     async updateUserFavoriteUser (user, shouldAdd) {
-      const apiStore = useApiStore()
       const userNotificationStore = useUserNotificationStore()
       if (shouldAdd) {
         this.favoriteUsers.push(user)
@@ -477,11 +395,9 @@ export const useUserStore = defineStore('user', {
         })
         userNotificationStore.removeFavoriteUser(user)
       }
-      const body = { favoriteUserId: user.id, value: shouldAdd }
-      await apiStore.addToQueue({ name: 'updateFavoriteUser', body })
+      await cache.updateUser({ favoriteUsers: this.favoriteUsers })
     },
     async updateUserFavoriteColor (color, shouldAdd) {
-      const apiStore = useApiStore()
       color = color.color
       if (shouldAdd) {
         this.favoriteColors.push(color)
@@ -490,8 +406,7 @@ export const useUserStore = defineStore('user', {
           return favoriteColor !== color
         })
       }
-      const body = { color, value: shouldAdd }
-      await apiStore.addToQueue({ name: 'updateFavoriteColor', body })
+      await cache.updateUser({ favoriteColors: this.favoriteColors })
     },
 
     async updateUserFavoriteSpaceIsEdited (space) {
@@ -538,7 +453,6 @@ export const useUserStore = defineStore('user', {
     // card limit
 
     async updateUserCardsCreatedCount (cards, shouldDecrement) {
-      const apiStore = useApiStore()
       cards = cards.filter(card => Boolean(card))
       cards = cards.filter(card => !card.isCreatedThroughPublicApi)
       cards = cards.filter(card => this.getUserIsCurrentUser({ id: card.userId }))
@@ -548,18 +462,9 @@ export const useUserStore = defineStore('user', {
         delta = -delta
       }
       const count = this.cardsCreatedCount + delta
-      const shouldUpdate = !this.getShouldPreventCardsCreatedCountUpdate
       this.cardsCreatedCountRaw = count
-      if (shouldUpdate) {
-        this.cardsCreatedCount = count
-        cache.updateUser({ cardsCreatedCount: count, cardsCreatedCountRaw: count })
-        this.checkIfShouldNotifyCardsCreatedIsOverLimit()
-      }
-      // update raw vanity count
-      await apiStore.addToQueue({ name: 'updateUserCardsCreatedCountRaw', body: { delta } })
-      // update count
-      if (!shouldUpdate) { return }
-      await apiStore.addToQueue({ name: 'updateUserCardsCreatedCount', body: { delta } })
+      this.cardsCreatedCount = count
+      cache.updateUser({ cardsCreatedCount: count, cardsCreatedCountRaw: count })
     },
     checkIfShouldNotifyCardsCreatedIsOverLimit () {
       const globalStore = useGlobalStore()
@@ -569,41 +474,19 @@ export const useUserStore = defineStore('user', {
       globalStore.updateNotifyCardsCreatedIsOverLimit(false)
     },
     getUserCardsCreatedWillBeOverLimit (count) {
-      if (this.isUpgraded) { return }
-      if (this.cardsCreatedCount + count >= consts.freeCardsCreatedLimit) { return true }
+      return false
     },
 
     // inbox
 
     async getInboxSpace () {
-      const apiStore = useApiStore()
-      let space = await cache.getInboxSpace()
-      if (!space) {
-        try {
-          space = await apiStore.getUserInboxSpace()
-        } catch (error) {
-          console.warn('🚑 inboxSpace', error)
-        }
-      }
-      return space
+      return cache.getInboxSpace()
     },
 
     // are.na
 
-    async updateUserArenaAccessToken (arenaReturnedCode) {
-      const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
-      console.info('updateArenaAccessToken')
-      globalStore.importArenaChannelIsVisible = true
-      globalStore.isAuthenticatingWithArena = true
-      const { arenaAccessToken } = await apiStore.updateArenaAccessToken(arenaReturnedCode)
-      this.arenaAccessToken = arenaAccessToken
-      globalStore.importArenaChannelIsVisible = true
-      globalStore.isAuthenticatingWithArena = false
-      await apiStore.addToQueue({
-        name: 'updateUser',
-        body: { arenaAccessToken }
-      })
+    async updateUserArenaAccessToken () {
+
     },
 
     // drawing
@@ -647,7 +530,6 @@ export const useUserStore = defineStore('user', {
     // hidden spaces
 
     async updateUserHiddenSpace (spaceId, isHidden) {
-      const apiStore = useApiStore()
       const space = { id: spaceId }
       if (isHidden) {
         this.hiddenSpaces.push(space)
@@ -656,13 +538,7 @@ export const useUserStore = defineStore('user', {
           return space?.id !== spaceId
         })
       }
-      await apiStore.addToQueue({
-        name: 'updateSpaceIsHidden',
-        body: {
-          spaceId,
-          isHidden
-        }
-      })
+      await cache.updateUser({ hiddenSpaces: this.hiddenSpaces })
     },
 
     // filters

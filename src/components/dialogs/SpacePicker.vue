@@ -4,7 +4,6 @@ import { reactive, computed, onMounted, onBeforeUnmount, watch, ref, nextTick } 
 import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 
 import User from '@/components/User.vue'
 import SpaceList from '@/components/SpaceList.vue'
@@ -22,7 +21,6 @@ import sortBy from 'lodash-es/sortBy'
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 
 const dialogElement = ref(null)
 const newSpaceNameElement = ref(null)
@@ -143,20 +141,8 @@ const updateSpaces = async () => {
     state.spaces = props.userSpaces
   } else {
     state.spaces = await cache.getAllSpaces()
-    updateWithRemoteSpaces()
   }
-  excludeCurrentSpace()
-}
-const updateWithRemoteSpaces = async () => {
-  if (!state.spaces.length) {
-    state.isLoading = true
-  }
-  const currentUser = userStore.getUserAllState
-  let spaces = await apiStore.getUserSpaces()
-  spaces = utils.addCurrentUserIsCollaboratorToSpaces(spaces, currentUser)
   state.isLoading = false
-  if (!spaces) { return }
-  state.spaces = spaces
   excludeCurrentSpace()
 }
 const selectSpace = (space) => {
@@ -197,9 +183,6 @@ const createNewSpace = async () => {
   space.background = space.background || consts.defaultSpaceBackground
   space = await cache.updateIdsInSpace(space)
   console.info('🚚 create new space', space)
-  if (currentUserIsSignedIn.value) {
-    await apiStore.createSpace(space)
-  }
   state.isLoadingNewSpace = false
   selectSpace(space)
 }

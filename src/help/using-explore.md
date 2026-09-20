@@ -1,6 +1,6 @@
 ---
 title: Discover Community Spaces with Explore and Live
-description: Explore is a list of cool spaces made and explicitly shared by other people (like you) with the Kinopio community.
+description: Explore is a list of cool spaces made and explicitly shared by other people (like you) with the dreemurr community.
 category: Community
 updated: 2026-09-03
 image: https://updates.kinopio.club/pages/help/posts/explore/add-to-explore.webp
@@ -10,7 +10,7 @@ image: https://updates.kinopio.club/pages/help/posts/explore/add-to-explore.webp
 
 ## Explore
 
-Explore is a list of cool spaces made and explicitly shared by other people (like you) with the Kinopio community.
+Explore is a list of cool spaces made and explicitly shared by other people (like you) with the dreemurr community.
 
 To add or remove your own cool space to Explore, toggle `Spaces → Add to Explore`.
 

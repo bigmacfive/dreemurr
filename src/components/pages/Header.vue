@@ -83,7 +83,7 @@ const toggleAppsAndExtensionsIsVisible = () => {
         .left
           .logo-about
             .button-wrap
-              .logo(alt="kinopio logo" @click.left.stop="toggleAboutIsVisible" @touchend.stop @mouseup.left.stop :class="{active: state.aboutIsVisible}" tabindex="0")
+              .logo(alt="dreemurr logo" @click.left.stop="toggleAboutIsVisible" @touchend.stop @mouseup.left.stop :class="{active: state.aboutIsVisible}" tabindex="0")
                 .logo-image
               About(:visible="state.aboutIsVisible")
               KeyboardShortcuts(:visible="state.keyboardShortcutsIsVisible")
@@ -100,7 +100,7 @@ const toggleAppsAndExtensionsIsVisible = () => {
               AppsAndExtensions(:visible="state.appsAndExtensionsIsVisible")
           .button-wrap
             router-link(to="/app")
-              button.success Open Kinopio
+              button.success Open dreemurr
 </template>
 
 <style lang="stylus">

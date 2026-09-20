@@ -590,10 +590,16 @@ aside.notifications(@click.left="closeAllDialogs")
 
 <style lang="stylus">
 .notifications
+  position absolute
+  left 50%
+  bottom 8px
+  transform translateX(-50%)
   display flex
   flex-direction column
-  align-items flex-start
-  max-width 276px
+  align-items center
+  max-width 320px
+  width max-content
+  z-index 1
   &:empty
     margin 0
   .item,

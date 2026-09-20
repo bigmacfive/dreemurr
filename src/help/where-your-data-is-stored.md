@@ -1,7 +1,7 @@
 ---
 title: Where Your Data is Stored?
 description: "Your user and spaces data lives entirely on your own computer, in your browser's local indexeddb storage. Because it is not sent to a server, you can't share your spaces or access your spaces from another device."
-category: About Kinopio
+category: About dreemurr
 updated: 2026-09-03
 ---
 

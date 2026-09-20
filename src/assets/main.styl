@@ -20,15 +20,31 @@
   --small-user-avatar-radius 5px
   --subsection-padding 5px
   --button-fixed-height 30px
-  --sans-serif-font "Helvetica Neue", Helvetica, Arial, sans-serif
+  --sans-serif-font "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif
   --mono-font Menlo, Monaco, monospace
-  --serif-font georgia, serif
+  --serif-font "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif
   --glyphs-font GoodGlyphs, wingdings
   --is-checked-opacity 0.6
   --focus-padding 20px
   --small-focus-padding 16px
   --snap-guide-width 6px
   --snap-guide-ready-duration 0.4s
+  --brand #F3A36C
+  --brand-hover #ee9258
+  --brand-active #e88345
+
+@font-face
+  font-family 'Pretendard Variable'
+  src url("/fonts/pretendard/PretendardVariable.woff2") format("woff2-variations")
+  font-weight 45 920
+  font-style normal
+  font-display swap
+@font-face
+  font-family 'Pretendard'
+  src url("/fonts/pretendard/PretendardVariable.woff2") format("woff2-variations")
+  font-weight 45 920
+  font-style normal
+  font-display swap
 
 @font-face
   font-family 'GoodGlyphs'
@@ -167,16 +183,172 @@
   font-weight normal
   font-style normal
 
+:root
+  --header-font-0 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-1 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-2 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-3 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-4 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-5 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-6 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-7 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-8 "Pretendard Variable", var(--sans-serif-font)
+  --header-font-9 "Pretendard Variable", var(--sans-serif-font)
+
 *
   // -webkit-overflow-scrolling touch
   -webkit-tap-highlight-color transparent
   box-sizing border-box
-  font-family  var(--sans-serif-font)
+  font-family var(--sans-serif-font)
   font-size 15px
   line-height 1.2
+  letter-spacing -0.03em
+
+.window-frame:not(.desktop)
+  display contents
 
 html
   background transparent
+  font-family var(--sans-serif-font)
+  letter-spacing -0.03em
+  &.is-tauri
+    --titlebar-height 28px
+    background transparent
+    clip-path inset(0 round 10px)
+    body
+      background transparent
+      overflow auto
+    #app
+      background transparent
+    .window-frame.desktop
+      background var(--primary-background)
+      min-height 100%
+    header
+      top var(--titlebar-height)
+      padding 6px 10px 4px
+    nav.toolbar
+      top calc(var(--titlebar-height) + 42px)
+    .titlebar
+      position fixed
+      top 0
+      left 0
+      right 0
+      height 28px
+      z-index calc(var(--max-z) + 1)
+      display flex
+      align-items center
+      background var(--primary-background)
+      pointer-events all
+      user-select none
+    .titlebar-controls
+      display flex
+      align-items center
+      justify-content center
+      gap 8px
+      height 28px
+      padding 0 12px 0 16px
+      flex-shrink 0
+    .titlebar-light
+      width 12px
+      height 12px
+      min-width 12px
+      min-height 12px
+      padding 0
+      margin 0
+      border 0
+      border-radius 0
+      background transparent
+      box-shadow none
+      appearance none
+      -webkit-appearance none
+      display flex
+      align-items center
+      justify-content center
+      &:hover,
+      &:active,
+      &:focus
+        background transparent
+        box-shadow none
+        outline none
+      .dot
+        width 12px
+        height 12px
+        border-radius 50%
+        border 0.5px solid rgba(0, 0, 0, 0.14)
+        pointer-events none
+        position relative
+      &.close .dot
+        background #ff5f57
+      &.minimize .dot
+        background #febc2e
+      &.zoom .dot
+        background #28c840
+      .dot:before,
+      .dot:after
+        content ''
+        position absolute
+        left 50%
+        top 50%
+        opacity 0
+      &.close .dot:before,
+      &.close .dot:after
+        width 7px
+        height 1px
+        background #4d0000
+      &.close .dot:before
+        transform translate(-50%, -50%) rotate(45deg)
+      &.close .dot:after
+        transform translate(-50%, -50%) rotate(-45deg)
+      &.minimize .dot:before
+        width 7px
+        height 1px
+        background #985700
+        transform translate(-50%, -50%)
+      &.zoom .dot:before
+        width 5px
+        height 5px
+        border 1px solid #006500
+        border-radius 0.5px
+        background transparent
+        transform translate(-50%, -50%)
+      &:hover .dot:before,
+      &:hover .dot:after
+        opacity 1
+    .titlebar-drag
+      flex 1
+      height 28px
+      display flex
+      align-items center
+      justify-content center
+      min-width 0
+      padding-right 76px
+    .titlebar-name
+      overflow hidden
+      text-overflow ellipsis
+      white-space nowrap
+      max-width 100%
+      font-family var(--sans-serif-font)
+      font-size 13px
+      font-weight 500
+      font-style normal
+      letter-spacing -0.01em
+      line-height 28px
+      color var(--primary)
+      opacity 0.5
+      pointer-events none
+    .titlebar.unfocused
+      .titlebar-name
+        opacity 0.32
+      .titlebar-light .dot
+        background #d8d8d8
+        border-color rgba(0, 0, 0, 0.18)
+      .titlebar-controls:hover
+        .close .dot
+          background #ff5f57
+        .minimize .dot
+          background #febc2e
+        .zoom .dot
+          background #28c840
 
 body
   background transparent
@@ -185,6 +357,8 @@ body
   -webkit-user-select none
   user-select none
   overflow auto // enables window.scrollBy support
+  font-family var(--sans-serif-font)
+  letter-spacing -0.03em
 
 .app
   position relative

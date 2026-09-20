@@ -5,7 +5,6 @@ import { useCardStore } from '@/stores/useCardStore'
 import { useBoxStore } from '@/stores/useBoxStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 import { useGlobalStore } from '@/stores/useGlobalStore'
 
@@ -166,7 +165,6 @@ export const useListStore = defineStore('lists', {
     },
     async createList ({ list = {}, isResizing }) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const broadcastStore = useBroadcastStore()
       if (!userStore.getUserIsSpaceMember) { return }
@@ -179,7 +177,6 @@ export const useListStore = defineStore('lists', {
         globalStore.currentUserIsResizingList = true
         globalStore.currentUserIsResizingListIds = [list.id]
       }
-      await apiStore.addToQueue({ name: 'createList', body: list })
     },
 
     // snap
@@ -246,7 +243,6 @@ export const useListStore = defineStore('lists', {
       })
     },
     async updateLists (updates) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
@@ -254,9 +250,6 @@ export const useListStore = defineStore('lists', {
       if (!updates.length) { return }
       this.updateListsState(updates)
       broadcastStore.update({ updates, store: 'listStore', action: 'updateListsState' })
-      for (const list of updates) {
-        await apiStore.addToQueue({ name: 'updateList', body: list })
-      }
       await cache.updateSpace('lists', this.getAllLists, spaceStore.id)
     },
     updateList (update) {
@@ -497,7 +490,6 @@ export const useListStore = defineStore('lists', {
       }
     },
     async removeLists (ids = []) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const cardStore = useCardStore()
       const spaceStore = useSpaceStore()
@@ -509,7 +501,6 @@ export const useListStore = defineStore('lists', {
       // remove lists
       for (const id of ids) {
         const list = this.getList(id)
-        await apiStore.addToQueue({ name: 'removeList', body: list })
       }
       this.removeListsFromState(ids)
       broadcastStore.update({ updates: { ids }, store: 'listStore', action: 'removeListsBroadcast' })

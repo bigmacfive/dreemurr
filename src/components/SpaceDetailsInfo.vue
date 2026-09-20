@@ -12,7 +12,6 @@ import BackgroundPreview from '@/components/BackgroundPreview.vue'
 import Loader from '@/components/Loader.vue'
 import PrivacyButton from '@/components/PrivacyButton.vue'
 import SpaceInfoBadges from '@/components/SpaceInfoBadges.vue'
-import FavoriteSpaceButton from '@/components/FavoriteSpaceButton.vue'
 import AddToGroup from '@/components/dialogs/AddToGroup.vue'
 import SpaceOptions from '@/components/SpaceOptions.vue'
 import cache from '@/cache.js'
@@ -284,32 +283,12 @@ const removeSpaceGroup = (group) => {
 //- members
 template(v-if="isSpaceMember")
   .row.title-row
-    .info-buttons-wrap
-      //- Privacy
-      PrivacyButton(:privacyPickerIsVisible="state.privacyPickerIsVisible" :showShortName="true" @togglePrivacyPickerIsVisible="togglePrivacyPickerIsVisible" @closeDialogs="closeDialogs" @updateLocalSpaces="updateLocalSpaces")
-        //- toggle space group | favorite
-      template(v-if="userGroups")
-        .button-wrap
-          .segmented-buttons
-            //- Group
-            button.group-button(title="Add to Group" :class="{active: state.addToGroupIsVisible || spaceGroup}" @click.left.prevent.stop="toggleAddToGroupIsVisible" @keydown.stop.enter="toggleAddToGroupIsVisible")
-              img.icon.group(src="@/assets/group.svg")
-            //- Template
-            button(:class="{ active: currentSpaceIsUserTemplate }" @click.left.prevent="toggleCurrentSpaceIsUserTemplate" @keydown.stop.enter="toggleCurrentSpaceIsUserTemplate" title="Mark as Template")
-              img.icon.templates(src="@/assets/templates.svg")
-            //- Favorite
-            FavoriteSpaceButton(:parentIsDialog="true" @updateLocalSpaces="updateLocalSpaces")
-          AddToGroup(:visible="state.addToGroupIsVisible" @selectGroup="toggleSpaceGroup" :groups="userGroups" :selectedGroup="spaceGroup" @closeDialogs="closeDialogs")
-      template(v-else)
-        //- Favorite
-        FavoriteSpaceButton(:parentIsDialog="true" @updateLocalSpaces="updateLocalSpaces")
     //- Options
     .button-wrap
       button(@click="toggleOptionsIsVisible" :class="{active: state.optionsIsVisible}" title="Space Options")
         span ⋯
 //- read only users
 .row(v-if="!isSpaceMember")
-  FavoriteSpaceButton(:parentIsDialog="true" @updateLocalSpaces="updateLocalSpaces")
   .button-wrap
     button(@click="toggleOptionsIsVisible" :class="{active: state.optionsIsVisible}")
       span Options

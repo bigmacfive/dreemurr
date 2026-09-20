@@ -105,13 +105,7 @@ const shouldDisplayList = computed(() => {
   let footer = document.querySelector('.footer-wrap')
   header = header.getBoundingClientRect()
   footer = footer.getBoundingClientRect()
-  let minimapHeight = 0
-  let minimap = document.querySelector('#space-minimap')
-  if (userStore.shouldShowMinimap && minimap) {
-    minimap = minimap.getBoundingClientRect()
-    minimapHeight = minimap.height
-  }
-  const availableHeight = globalStore.viewportHeight - header.height - footer.height - minimapHeight
+  const availableHeight = globalStore.viewportHeight - header.height - footer.height
   return tocHeight < availableHeight
 })
 const triggerTocIsVisible = () => {

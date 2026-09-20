@@ -116,7 +116,7 @@ const signOut = async () => {
   userStore.clearUserLastSpaceId()
   await cache.removeAll()
   // clear history wipe state from vue-router
-  window.history.replaceState({}, 'Kinopio', '/')
+  window.history.replaceState({}, consts.appName, '/')
   location.reload()
 }
 

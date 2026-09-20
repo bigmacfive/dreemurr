@@ -52,7 +52,7 @@ section.social-proof
       p {{ business }}
       p {{ academic }}
 
-    p Kinopio has also been featured in{{' '}}
+    p dreemurr has also been featured in{{' '}}
       a(href="https://www.theverge.com/23845815/threads-web-fabric-car-tech-installer-newsletter") The Verge
       span ,{{' '}}
       a(href="https://appstacks.club/kinopio") App Stacks

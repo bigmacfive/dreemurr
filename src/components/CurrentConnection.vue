@@ -240,6 +240,7 @@ svg.current-connection
   position absolute
   min-width 5px
   min-height 5px
+  z-index calc(var(--max-z) - 200)
   path.current-connection-path
     pointer-events none
 </style>

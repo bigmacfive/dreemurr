@@ -12,13 +12,13 @@ image: https://us-east-1.linodeobjects.com/kinopio-uploads/M3Y0aaFCNIHsIMXvz1f78
 
 <img src="https://us-east-1.linodeobjects.com/kinopio-uploads/M3Y0aaFCNIHsIMXvz1f78/witch.png" class="no-shadow" style="width: 150px"/>
 
-- Kinopio won’t show you ads of any kind, or sell your data.
+- dreemurr won’t show you ads of any kind, or sell your data.
 - Your data is never used to train AI.
-- Children, and anyone else, will be able to use Kinopio anonymously. Without an account, none of your data will be transmitted to Kinopio servers. (👀 [How Your Data is Stored](/help/where-your-data-is-stored))
+- Children, and anyone else, will be able to use dreemurr anonymously. Without an account, none of your data will be transmitted to dreemurr servers. (👀 [How Your Data is Stored](/help/where-your-data-is-stored))
 - To enable you to share spaces and collaborate, you will need to create an account. Your user data and spaces will then be hosted on Railway.
 - User uploads are stored in Linode Object Storage. and server logs for debugging are saved by Railway. Server logs redact personal information (like card names), and are deleted after 30 days.
 - To enable billing for paid plans, only the user information needed to process payments will be shared with Stripe.
-- The only cookie used stores a single boolean for whether you've opened the app. Local IndexedDB is used to save your info. Unlike cookies, other websites cannot access your Kinopio data ([How Kinopio is Made](https://pketh.org/how-kinopio-is-made.html)).
+- The only cookie used stores a single boolean for whether you've opened the app. Local IndexedDB is used to save your info. Unlike cookies, other websites cannot access your dreemurr data ([How dreemurr is Made](https://pketh.org/how-kinopio-is-made.html)).
 - Analytics for tracking simple counts of how often specific features are used do not use third-party services. Analytics events are not linked to you personally.
 - Through `Sidebar → Removed`, you can permanently delete cards or spaces. When you do, all uploads associated with those cards are also deleted.
 - You can permanently delete all of your user data at anytime through `User → Settings`.

@@ -6,8 +6,6 @@ import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useCardStore } from '@/stores/useCardStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
-import { useBroadcastStore } from '@/stores/useBroadcastStore'
 
 import utils from '@/utils.js'
 import consts from '@/consts.js'
@@ -59,9 +57,14 @@ export const useUploadStore = defineStore('upload', {
       if (!upload) { return }
       this.sessionUploadDataUrl[cardId] = upload
     },
-    removePendingUpload ({ cardId, spaceId, boxId }) {
+    removePendingUpload ({ cardId, spaceId, boxId } = {}) {
       this.updateCardSessionUploadDataUrl(cardId)
-      this.pendingUploads = this.pendingUploads.filter(item => (item.cardId !== cardId || item.spaceId === spaceId || item.boxId !== boxId))
+      this.pendingUploads = this.pendingUploads.filter(item => {
+        if (cardId && item.cardId === cardId) { return false }
+        if (spaceId && item.spaceId === spaceId) { return false }
+        if (boxId && item.boxId === boxId) { return false }
+        return true
+      })
     },
 
     checkIfFileTooBig (file) {
@@ -86,7 +89,7 @@ export const useUploadStore = defineStore('upload', {
       }
     },
     addImageDataUrl ({ file, cardId, spaceId }) {
-      const fileType = file.type || utils.imageFileTypeFromName(file)
+      const fileType = file.type || utils.imageFileTypeFromName(file) || ''
       const isImage = fileType.includes('image')
       if (!isImage) { return null }
       this.updatePendingUpload({
@@ -95,73 +98,38 @@ export const useUploadStore = defineStore('upload', {
         imageDataUrl: URL.createObjectURL(file)
       })
     },
-    async uploadFile ({ file, cardId, spaceId, boxId }) {
-      const globalStore = useGlobalStore()
-      const broadcastStore = useBroadcastStore()
-      const apiStore = useApiStore()
-      const userStore = useUserStore()
-      const cardStore = useCardStore()
-      const uploadId = nanoid()
-      const fileName = utils.normalizeFileUrl(file.name)
-      const id = cardId || spaceId || boxId
-      const key = `${id}/${fileName}`
-      this.checkIfFileTooBig(file)
-      this.checkIfFileTypeBlocked(file)
-      // add presignedPostData to upload
-      let presignedPostData
-      if (file.presignedPostData) {
-        presignedPostData = file.presignedPostData
-      } else {
-        presignedPostData = await apiStore.createPresignedPost({ key, type: file.type })
-      }
-      const formData = new FormData()
-      Object.keys(presignedPostData.fields).forEach(key => {
-        formData.append(key, presignedPostData.fields[key])
-      })
-      formData.append('file', file)
-      // upload
-      return new Promise(resolve => {
-        const request = new XMLHttpRequest()
-        // progress
-        request.upload.onprogress = async (event) => {
-          const percentComplete = event.loaded / event.total * 100
-          const percentCompleteDisplay = Math.floor(percentComplete)
-          console.info(`🛫 Uploading ${fileName} for ${id}, percent: ${percentCompleteDisplay}`)
-          const updates = {
-            cardId,
-            spaceId,
-            boxId,
-            percentComplete: percentCompleteDisplay,
-            userId: userStore.id,
-            id: uploadId
-          }
-          this.updatePendingUpload(updates)
-          broadcastStore.update({ updates, name: 'updateRemotePendingUploads' })
-          cardStore.insertCardUploadPlaceholder(file, cardId)
-          // end
-          if (percentComplete >= 100) {
-            const complete = {
-              cardId,
-              spaceId,
-              boxId,
-              url: `${consts.cdnHost}/${key}`,
-              fileName
-            }
-            console.info('🛬 Upload completed or failed', event, complete)
-            globalStore.triggerUploadComplete(complete)
-            this.removePendingUpload({ cardId, spaceId, boxId })
-            resolve(request.response)
-          }
-        }
-        // start
-        request.open('POST', presignedPostData.url)
-        request.send(formData)
-        this.addPendingUpload({ key, fileName, cardId, spaceId, boxId })
-        this.addImageDataUrl({ file, cardId, spaceId, boxId })
+    fileToDataUrl (file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
       })
     },
+    async storeLocalFile (file) {
+      const type = file.type || utils.imageFileTypeFromName(file)
+      if (type && type !== file.type) {
+        file = new File([file], file.name || `pasted.${type.replace('image/', '')}`, { type })
+      }
+      return this.fileToDataUrl(file)
+    },
+    async uploadFile ({ file, cardId, spaceId, boxId }) {
+      const cardStore = useCardStore()
+      this.checkIfFileTypeBlocked(file)
+      this.addPendingUpload({ cardId, spaceId, boxId, fileName: file.name, isGif: utils.isGifFile(file) })
+      try {
+        this.addImageDataUrl({ file, cardId, spaceId, boxId })
+        this.updatePendingUpload({ cardId, percentComplete: 50 })
+        const dataUrl = await this.storeLocalFile(file)
+        if (cardId && dataUrl) {
+          await cardStore.updateCard({ id: cardId, name: dataUrl })
+        }
+        return dataUrl
+      } finally {
+        this.removePendingUpload({ cardId, spaceId, boxId })
+      }
+    },
     async addCardsAndUploadFiles ({ files, event, position }) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const cardStore = useCardStore()
       const globalStore = useGlobalStore()
@@ -172,79 +140,35 @@ export const useUploadStore = defineStore('upload', {
         globalStore.addNotification({ message: 'You can only upload files on spaces you can edit', type: 'info' })
         return
       }
-      const cardIds = []
-      if (!userStore.getUserIsSignedIn) {
-        globalStore.addNotificationWithPosition({ message: 'Sign Up or In', position, type: 'info', layer: 'space', icon: 'cancel' })
-        globalStore.addNotification({ message: 'To upload files, you need to Sign Up or In', type: 'info' })
-        return
-      }
-      // check if outside space
       const isOutsideSpace = utils.isPositionOutsideOfSpace(position)
       if (isOutsideSpace) {
-        position = utils.cursorPositionInPage(event)
-        globalStore.addNotificationWithPosition({ message: 'Outside Space', position, type: 'info', icon: 'cancel', layer: 'app' })
+        globalStore.addNotification({ message: 'Outside Space', type: 'info' })
         return
       }
-      // check blocked file types
       const hasBlockedFile = files.find(file => blockedExtensions.some(ext => file.name.toLowerCase().endsWith(ext)))
       if (hasBlockedFile) {
-        globalStore.addNotificationWithPosition({ message: 'File Type Blocked', position, type: 'danger', layer: 'space', icon: 'cancel' })
         globalStore.addNotification({ message: 'Executable files cannot be uploaded', type: 'danger' })
         return
       }
-      // check sizeLimit
-      const userIsUpgraded = userStore.isUpgraded
-      const filesTooBig = files.find(file => {
-        return utils.isFileTooBig({ file, userIsUpgraded })
-      })
-      if (filesTooBig) {
-        globalStore.addNotificationWithPosition({ message: 'Too Big', position, type: 'danger', layer: 'space', icon: 'cancel' })
-        globalStore.addNotification({ message: `To upload files over ${consts.freeUploadSizeLimit}mb, upgrade for unlimited size uploads`, type: 'danger' })
-        return
-      }
-      // add cards
-      const filesPostData = []
+      const cards = cardStore.getAllCards
+      const highestCardZ = utils.highestItemZ(cards)
       for (const [index, file] of files.entries()) {
-        const positionOffset = 20
+        const offset = index * 20
         const cardId = nanoid()
-        cardIds.push(cardId)
-        const cards = cardStore.getAllCards
-        const highestCardZ = utils.highestItemZ(cards)
-        const newCard = {
-          position: {
-            x: position.x + (index * positionOffset),
-            y: position.y + (index * positionOffset),
-            z: highestCardZ
-          },
-          name: consts.uploadPlaceholder,
-          id: cardId
-        }
-        cardStore.createCard(newCard)
-        const fileName = utils.normalizeFileUrl(file.name)
-        const key = `${cardIds[index]}/${fileName}`
-        filesPostData.push({
-          key,
-          type: file.type,
-          size: file.size
-        })
-        console.info('🍡 addCardsAndUploadFiles', file.type, file)
-      }
-      // add presignedPostData to files
-      const multiplePresignedPostData = await apiStore.createMultiplePresignedPosts({ files: filesPostData })
-      files.map((file, index) => {
-        file.presignedPostData = multiplePresignedPostData[index]
-      })
-      // upload files
-      await Promise.all(files.map(async (file, index) => {
-        const cardId = cardIds[index]
         try {
+          cardStore.createCard({
+            id: cardId,
+            x: position.x + offset,
+            y: position.y + offset,
+            z: highestCardZ + 1 + index,
+            name: consts.uploadPlaceholder
+          }, true)
           await this.uploadFile({ file, cardId })
         } catch (error) {
-          console.error('🚒', error)
-          globalStore.addNotificationWithPosition({ message: error.message, position, type: 'danger', layer: 'space', icon: 'cancel' })
-          globalStore.addNotification({ message: error.message, type: 'danger' })
+          console.error('🚒 addCardsAndUploadFiles', error)
+          globalStore.addNotification({ message: error.message || 'Could not paste image', type: 'danger' })
         }
-      }))
+      }
     }
 
   }

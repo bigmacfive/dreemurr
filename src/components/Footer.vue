@@ -3,23 +3,17 @@ import { reactive, computed, onMounted, onBeforeUnmount, watch, ref, nextTick } 
 
 import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useUserStore } from '@/stores/useUserStore'
-import { useSpaceStore } from '@/stores/useSpaceStore'
 
 import Notifications from '@/components/Notifications.vue'
 import SpaceZoom from '@/components/SpaceZoom.vue'
-import DiscoveryButtons from '@/components/DiscoveryButtons.vue'
-import FavoriteSpaceButton from '@/components/FavoriteSpaceButton.vue'
 import NewCardColorButton from '@/components/NewCardColorButton.vue'
 import Toc from '@/components/dialogs/Toc.vue'
 import utils from '@/utils.js'
-import consts from '@/consts.js'
 
 const globalStore = useGlobalStore()
 const userStore = useUserStore()
-const spaceStore = useSpaceStore()
 
 let unsubscribes
-let updateLiveSpacesIntervalTimer, updateCommunitySpacesIntervalTimer
 
 const footerElement = ref(null)
 
@@ -28,19 +22,6 @@ const updatePositionDuration = 60
 let hiddenOnTouchIteration, hiddenOnTouchTimer, updatePositionIteration, updatePositionTimer
 
 onMounted(() => {
-  // community spaces
-  if (!consts.isStaticPrerenderingPage) {
-    window.addEventListener('online', updateLiveSpaces)
-    window.addEventListener('online', updateCommunitySpaces)
-  }
-  updateLiveSpaces()
-  updateCommunitySpaces()
-  updateLiveSpacesIntervalTimer = setInterval(() => {
-    updateLiveSpaces()
-  }, 1000 * 60 * 5) // 5 minutes
-  updateCommunitySpacesIntervalTimer = setInterval(() => {
-    updateCommunitySpaces()
-  }, 1000 * 60 * 10) // 10 minutes
   // position
   window.addEventListener('scroll', updatePosition)
   window.addEventListener('resize', updatePosition)
@@ -66,23 +47,10 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => {
-  // community spaces
-  if (!consts.isStaticPrerenderingPage) {
-    window.removeEventListener('online', updateLiveSpaces)
-    window.removeEventListener('online', updateCommunitySpaces)
-  }
-  clearInterval(updateLiveSpacesIntervalTimer)
-  clearInterval(updateCommunitySpacesIntervalTimer)
   // position
   window.removeEventListener('scroll', updatePosition)
   window.removeEventListener('resize', updatePosition)
   unsubscribes()
-})
-
-watch(() => globalStore.isPresentationMode, (value, prevValue) => {
-  if (!value) {
-    globalStore.shouldExplicitlyHideFooter = false
-  }
 })
 
 const state = reactive({
@@ -91,15 +59,6 @@ const state = reactive({
   tocIsVisible: false,
   isScrolled: false
 })
-
-// community spaces
-
-const updateLiveSpaces = () => {
-  globalStore.triggerUpdateLiveSpaces()
-}
-const updateCommunitySpaces = () => {
-  globalStore.triggerUpdateCommunitySpaces()
-}
 
 // position
 
@@ -132,7 +91,6 @@ const isMobile = computed(() => utils.isMobile())
 const isMobileStandalone = computed(() => utils.isMobile() && navigator.standalone) // is homescreen app
 const isFadingOut = computed(() => globalStore.isFadingOutDuringTouch)
 const shouldIncreaseUIContrast = computed(() => userStore.shouldIncreaseUIContrast)
-const isOnline = computed(() => globalStore.isOnline)
 
 // visible
 
@@ -146,7 +104,6 @@ const leftIsVisble = computed(() => {
   return true
 })
 const leftControlsIsVisible = computed(() => {
-  if (isPresentationMode.value) { return }
   if (shouldExplicitlyHideFooter.value) { return }
   // const isTouchDevice = globalStore.isTouchDevice
   // if (!isTouchDevice) { return true }
@@ -155,7 +112,6 @@ const leftControlsIsVisible = computed(() => {
   return true
 })
 const rightControlsIsVisible = computed(() => {
-  // if (isPresentationMode.value) { return }
   if (globalStore.tocIsPinned) { return true }
   if (shouldExplicitlyHideFooter.value) { return }
   // const isTouchDevice = globalStore.isTouchDevice
@@ -167,14 +123,6 @@ const rightControlsIsVisible = computed(() => {
 const embedLabelIsVisible = computed(() => {
   return globalStore.isEmbedMode && !state.isScrolled
 })
-
-// presentation mode
-
-const isPresentationMode = computed(() => globalStore.isPresentationMode)
-const togglePresentationMode = () => {
-  const value = !isPresentationMode.value
-  globalStore.isPresentationMode = value
-}
 
 // jumpTo
 
@@ -268,37 +216,21 @@ const updatePositionInVisualViewport = () => {
   .label-badge.embed-label(v-if="embedLabelIsVisible")
     img.icon(src="@/assets/constrain-axis.svg")
     span Scroll horizontally and vertically
+  Notifications
   .left(v-if="leftIsVisble")
     footer
-      Notifications
       template(v-if="leftControlsIsVisible")
-        template(v-if="isOnline")
-          .footer-button-wrap
-            DiscoveryButtons
-          .footer-button-wrap
-            FavoriteSpaceButton(:isSmall="true")
         .footer-button-wrap
           NewCardColorButton
+        .footer-button-wrap(@click.stop="toggleMinimap")
+          button.small-button.minimap-button(
+            :class="{'hidden': state.isHiddenOnTouch, 'active': minimapIsVisible, 'translucent-button': !shouldIncreaseUIContrast}"
+            title="Toggle Minimap (M)"
+          )
+            img.icon.minimap(src="@/assets/minimap.svg")
 
   .right(v-if="rightControlsIsVisible" :class="{'is-embed': isEmbedMode}")
-    SpaceZoom(v-if="!isPresentationMode")
-    //- presentation mode
-    .button-wrap.footer-button-wrap(
-      @click="togglePresentationMode"
-      @touchend.stop :class="{'hidden': state.isHiddenOnTouch}"
-    )
-      button.small-button(
-        :class="{'active': isPresentationMode, 'translucent-button': !shouldIncreaseUIContrast}"
-        title="Focus/Presentation Mode (P)"
-      )
-        img.icon.presentation(src="@/assets/presentation.svg")
-    //- minimap
-    .button-wrap.footer-button-wrap(@click.stop="toggleMinimap")
-      button.small-button.minimap-button(
-        :class="{'hidden': state.isHiddenOnTouch, 'active': minimapIsVisible, 'translucent-button': !shouldIncreaseUIContrast}"
-        title="Toggle Minimap (M)"
-      )
-        img.icon.minimap(src="@/assets/minimap.svg")
+    SpaceZoom(v-if="isEmbedMode")
     Toc(:visible="state.tocIsVisible")
 </template>
 
@@ -337,9 +269,6 @@ const updatePositionInVisualViewport = () => {
     .footer-button-wrap
       padding-left 0
       padding-right 4px
-    .footer-button-wrap + .footer-button-wrap
-      position relative
-      z-index -1
 
   .left,
   .right
@@ -357,9 +286,6 @@ const updatePositionInVisualViewport = () => {
     padding-right 0
     translate 0px 3px
     display inline-block
-    .presentation-mode-button
-      padding-left 6px
-      padding-right 6px
 
   .footer-button-wrap + .footer-button-wrap
     margin-left 4px

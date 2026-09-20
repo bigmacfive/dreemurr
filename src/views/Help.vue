@@ -58,7 +58,7 @@ const categoryDetails = {
     index: 7,
     color: 'salmon'
   },
-  'about-kinopio': {
+  'about-dreemurr': {
     index: 8,
     color: 'mediumaquamarine'
   },
@@ -148,12 +148,12 @@ const imageType = (url) => {
 const organization = {
   '@type': 'Organization',
   '@id': 'https://kinopio.club/#organization',
-  name: 'Kinopio',
+  name: 'dreemurr',
   url: 'https://kinopio.club'
 }
 const breadcrumbSchema = (page, url) => {
   const itemListElement = [
-    { '@type': 'ListItem', position: 1, name: 'Kinopio', item: 'https://kinopio.club' },
+    { '@type': 'ListItem', position: 1, name: 'dreemurr', item: 'https://kinopio.club' },
     { '@type': 'ListItem', position: 2, name: 'Help', item: 'https://kinopio.club/help' }
   ]
   if (page) {
@@ -193,7 +193,7 @@ const pageSchema = (page, url, description, image) => {
       inLanguage: 'en',
       isPartOf: {
         '@type': 'WebPage',
-        name: 'Kinopio Help',
+        name: 'dreemurr Help',
         url: 'https://kinopio.club/help'
       },
       video: videoSchema(page, description, image),
@@ -204,7 +204,7 @@ const pageSchema = (page, url, description, image) => {
   return {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Kinopio Help',
+    name: 'dreemurr Help',
     description,
     url,
     // the index is as fresh as its most recently updated page. iso dates sort
@@ -228,12 +228,12 @@ const pageSchema = (page, url, description, image) => {
 }
 
 useHead(() => {
-  let title = 'Kinopio Help'
-  let description = 'Guides and documentation for using Kinopio'
+  let title = 'dreemurr Help'
+  let description = 'Guides and documentation for using dreemurr'
   let path = '/help'
   let image = 'https://files.kinopio.club/og-image.png'
   if (pageMeta.value) {
-    title = `${pageMeta.value.title} – Kinopio Help`
+    title = `${pageMeta.value.title} – dreemurr Help`
     description = pageMeta.value.description
     path = `/help/${pageMeta.value.slug}`
     image = pageMeta.value.image || image
@@ -367,7 +367,7 @@ const updateFilterOnSearchFocus = (event) => {
 
       template(v-if="currentSlugIsRoot && !state.filter")
         section
-            p Kinopio is a spatial canvas to collect and connect your thoughts, ideas, and plans – by yourself or collaboratively.
+            p dreemurr is a spatial canvas to collect and connect your thoughts, ideas, and plans – by yourself or collaboratively.
         AboutHowTo
 
       section
@@ -533,8 +533,8 @@ main.help-page-wrap
       background-color  var(--collaboration)
     &.importing-and-exporting
       background-color  var(--importing-and-exporting)
-    &.about-kinopio
-      background-color  var(--about-kinopio)
+    &.about-dreemurr
+      background-color  var(--about-dreemurr)
     &.community
       background-color  var(--community)
     &.user-settings

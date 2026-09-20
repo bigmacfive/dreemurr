@@ -234,12 +234,6 @@ const selectSpace = (event, space) => {
   emit('selectSpace', space)
 }
 
-// favorites
-
-const isFavorite = (space) => {
-  return spaceStore.getSpaceIsFavorite(space.id)
-}
-
 // scroll
 
 watch(() => props.resultsSectionHeight, async (value, prevValue) => {
@@ -445,12 +439,6 @@ span.space-list-wrap
             //- offline
             span(v-if="isOffline && isNotCached(space.id)")
               OfflineBadge(:isInline="true" :isDanger="true")
-            //- favorite
-            template(v-if="isFavorite(space)")
-              img.icon.favorite-icon(src="@/assets/heart.svg")
-            //- inbox
-            template(v-if="space.name === 'Inbox'")
-              img.icon.inbox-icon(src="@/assets/inbox.svg")
             //- Users
             //- show spectators
             template(v-if="showOtherUsers && isMultipleUsers(space)")

@@ -5,7 +5,6 @@ import { useBoxStore } from '@/stores/useBoxStore'
 import { useListStore } from '@/stores/useListStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useUserNotificationStore } from '@/stores/useUserNotificationStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 import { useThemeStore } from '@/stores/useThemeStore'
@@ -481,7 +480,6 @@ export const useCardStore = defineStore('cards', {
      */
     async createCard (card, skipCardDetailsIsVisible) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
@@ -502,7 +500,6 @@ export const useCardStore = defineStore('cards', {
       userStore.updateUserCardsCreatedCount([card])
       spaceStore.checkIfShouldNotifyCardsCreatedIsNearLimit()
       broadcastStore.update({ updates: card, store: 'cardStore', action: 'addCardToState' })
-      await apiStore.addToQueue({ name: 'createCard', body: card })
       userNotificationStore.addCardUpdated({ cardId: card.id, type: 'createCard' })
     },
     /**
@@ -575,7 +572,6 @@ export const useCardStore = defineStore('cards', {
     },
     /** @param {CardUpdate[]} updates */
     async updateCards (updates) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
@@ -587,9 +583,6 @@ export const useCardStore = defineStore('cards', {
         const ids = updates.map(update => update.id)
         connectionStore.updateConnectionPathsByItemIds(ids)
         broadcastStore.update({ updates, store: 'cardStore', action: 'updateCardsState' })
-        for (const card of updates) {
-          await apiStore.addToQueue({ name: 'updateCard', body: card })
-        }
         let cards = this.getAllCards
         cards = utils.clone(cards)
         await cache.updateSpace('cards', cards, spaceStore.id)
@@ -691,7 +684,6 @@ export const useCardStore = defineStore('cards', {
     },
     /** @param {Card[]} cards */
     async deleteCards (cards) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const broadcastStore = useBroadcastStore()
       const canEditSpace = userStore.getUserCanEditSpace
@@ -699,7 +691,6 @@ export const useCardStore = defineStore('cards', {
       for (const card of cards) {
         this.removeCardFromState(card)
         broadcastStore.update({ updates: card, store: 'cardStore', action: 'removeCardFromState' })
-        await apiStore.addToQueue({ name: 'deleteCard', body: card })
       }
     },
     /** @param {Card} card */
@@ -707,14 +698,12 @@ export const useCardStore = defineStore('cards', {
       await this.deleteCards([card])
     },
     async deleteAllRemovedCards () {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const spaceId = spaceStore.id
       const userId = userStore.id
       const cards = this.getAllRemovedCards
       await this.deleteCards(cards)
-      await apiStore.addToQueue({ name: 'deleteAllRemovedCards', body: { userId, spaceId } })
     },
     /** @param {string[]} ids */
     removeCards (ids) {
@@ -765,7 +754,6 @@ export const useCardStore = defineStore('cards', {
     },
     /** @param {Card} card */
     async restoreRemovedCard (card) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       card.isRemoved = false
@@ -778,7 +766,6 @@ export const useCardStore = defineStore('cards', {
       } else {
         this.addCardToState(card)
         await cache.updateSpace('cards', this.getAllCards, spaceStore.id)
-        await apiStore.addToQueue({ name: 'restoreRemovedCard', body: card })
         userStore.updateUserCardsCreatedCount([card])
       }
     },
@@ -1087,7 +1074,6 @@ export const useCardStore = defineStore('cards', {
      * @param {boolean} value
      */
     async toggleOtherSpaceCardChecked (card, value) {
-      const apiStore = useApiStore()
       let { id, name, spaceId } = card
       const checkbox = utils.checkboxFromString(name)
       name = name.replace(checkbox, '')
@@ -1101,7 +1087,7 @@ export const useCardStore = defineStore('cards', {
         name,
         spaceId
       }
-      await apiStore.updateCards([update])
+      await cache.updateCardInSpace(spaceId, update)
     },
     markAllCheckboxCardsChecked () {
       const cards = this.getAllCards
@@ -1197,7 +1183,6 @@ export const useCardStore = defineStore('cards', {
      */
     updateCardVote ({ card, shouldIncrement, shouldDecrement }) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const broadcastStore = useBroadcastStore()
       const update = {
         cardId: card.id,
@@ -1207,7 +1192,6 @@ export const useCardStore = defineStore('cards', {
       if (globalStore.getShouldPreventCardVote(update)) { return }
       this.updateCardsState([card])
       globalStore.updateCardVote(update)
-      apiStore.updateCardCounter(update)
       broadcastStore.update({ updates: [card], store: 'cardStore', action: 'updateCardsState' })
     },
 

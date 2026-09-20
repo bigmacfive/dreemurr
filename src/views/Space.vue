@@ -9,7 +9,6 @@ import { useLineStore } from '@/stores/useLineStore'
 import { useListStore } from '@/stores/useListStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useGroupStore } from '@/stores/useGroupStore'
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
@@ -44,6 +43,7 @@ import DrawingHandler from '@/components/layers/DrawingHandler.vue'
 import SonarPing from '@/components/layers/SonarPing.vue'
 import UserLabelCursor from '@/components/UserLabelCursor.vue'
 import Footer from '@/components/Footer.vue'
+import SpaceZoom from '@/components/SpaceZoom.vue'
 import WindowHistoryHandler from '@/components/WindowHistoryHandler.vue'
 import KeyboardShortcutsHandler from '@/components/KeyboardShortcutsHandler.vue'
 import ScrollAndTouchHandler from '@/components/ScrollAndTouchHandler.vue'
@@ -76,7 +76,6 @@ const lineStore = useLineStore()
 const listStore = useListStore()
 const userStore = useUserStore()
 const spaceStore = useSpaceStore()
-const apiStore = useApiStore()
 const groupStore = useGroupStore()
 const analyticsStore = useAnalyticsStore()
 const broadcastStore = useBroadcastStore()
@@ -88,7 +87,7 @@ let unsubscribes
 
 let prevCursor, endCursor, endSpaceCursor, shouldCancel
 let processQueueIntervalTimer, hourlyTasks
-let statusRetryCount = 0
+const statusRetryCount = 0
 
 // expose pinia stores to browser console for developers
 window.globalStore = useGlobalStore()
@@ -112,15 +111,11 @@ const init = async () => {
   if (globalStore.shouldNotifyIsJoiningGroup) {
     globalStore.updateNotifyIsJoiningGroup(true)
   }
-  apiStore.updateDateImage()
   globalStore.updateSessionDate()
   analyticsStore.event('pageview')
   await cache.migrateFromLocalStorage() // legacy
   await spaceStore.initializeSpace()
-  // broadcastStore.connect()
-  await groupStore.initializeGroups()
   historyStore.init()
-  changelogStore.init()
   userStore.checkIfShouldApplyAffiliatePromo()
 }
 
@@ -129,10 +124,8 @@ onMounted(async () => {
   console.info('🐸 kinopio-server URL', consts.apiHost())
   globalStore.spaceComponentIsMounted = true
   if (utils.isLinux()) {
-    utils.setCssVariable('sans-serif-font', '"Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif')
+    utils.setCssVariable('sans-serif-font', '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif')
   }
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', logSystemThemeChange)
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateSystemTheme)
   updateIsOnline()
   window.addEventListener('online', updateIsOnline)
   window.addEventListener('offline', updateIsOnline)
@@ -171,13 +164,7 @@ onMounted(async () => {
 
   // ⏰ scheduled tasks
   // retry failed sync operations
-  processQueueIntervalTimer = setInterval(() => {
-    apiStore.sendQueue()
-  }, 5000) // every 5 seconds
-  // update inbox space in local storage, one time
   hourlyTasks = setInterval(() => {
-    spaceStore.updateInboxCache()
-    apiStore.updateDateImage()
     globalStore.updateSessionDate()
   }, 1000 * 60 * 60 * 1) // every 1 hour
 
@@ -190,7 +177,7 @@ onMounted(async () => {
         const event = args[0]
         addList(event)
       } else if (name === 'triggerUserIsLoaded') {
-        updateSystemTheme()
+        themeStore.restoreTheme()
       }
     }
   )
@@ -209,8 +196,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   // App cleanup
-  window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', logSystemThemeChange)
-  window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', updateSystemTheme)
   window.removeEventListener('online', updateIsOnline)
   window.removeEventListener('offline', updateIsOnline)
   // Space cleanup
@@ -748,6 +733,11 @@ const showMultipleSelectedActions = (event) => {
 
 // minimap
 
+const leftBottomStackIsVisible = computed(() => {
+  if (globalStore.isEmbedMode) { return }
+  if (globalStore.shouldExplicitlyHideFooter) { return }
+  return true
+})
 const minimapIsVisible = computed(() => {
   if (globalStore.shouldExplicitlyHideFooter) { return }
   return userStore.shouldShowMinimap || isPanningReady.value || isPanning.value
@@ -1051,24 +1041,7 @@ const updateIsOnline = () => {
   updateServerIsOnline()
 }
 const updateServerIsOnline = async () => {
-  const maxIterations = 10
-  const initialDelay = 1000 // 1 second
-  const serverStatus = await apiStore.getStatus()
-  if (serverStatus) {
-    globalStore.updateIsOnline(true)
-  // error offline
-  } else {
-    console.info('server online status', serverStatus)
-    globalStore.updateIsOnline(false)
-  }
-  // retry
-  let delay // delay increases up to ~15 minutes
-  if (statusRetryCount < maxIterations) {
-    statusRetryCount++
-    delay = Math.pow(2, statusRetryCount) * initialDelay
-  }
-  delay = delay || 15 * 60 * 1000 // 15 minutes
-  setTimeout(updateServerIsOnline, delay)
+  globalStore.updateIsOnline(true)
 }
 
 // theme
@@ -1155,14 +1128,11 @@ const shouldPrevent = computed(() => {
   @pointermove="broadcastUserLabelCursor"
   @touchstart="isTouchDevice"
   :style="{ width: appPageWidth + 'px', height: appPageHeight + 'px', cursor: pageCursor }"
-  :class="{ 'no-background': !isSpacePage, 'is-dark-theme': isThemeDark }"
+  :class="{ 'no-background': !isSpacePage }"
   :data-current-user-id="currentUserId"
 )
   //- page
   OutsideSpaceBackground
-  //- user presence cursors
-  template(v-for="user in users")
-    UserLabelCursor(:user="user")
   //- space
   main#space.space(
     :class="{'is-interacting': isInteracting, 'is-not-interacting': isPaintSelecting || isPanningReady}"
@@ -1178,9 +1148,9 @@ const shouldPrevent = computed(() => {
     #box-backgrounds
     Boxes
     #list-backgrounds
-    Connections
     #box-infos
     Cards
+    Connections
     #card-meta-containers
     CardCommentPreview(:visible="cardCommentPreviewIsVisible" :card="currentHoveredCard")
     Lines
@@ -1202,15 +1172,16 @@ const shouldPrevent = computed(() => {
   aside
     PaintSelectCanvas
     DrawingHandler
-    SonarPing
   //- page ui, dialogs
   Header
   RightSideToc
   Footer
   TagDetails
   UserDetails
-  #space-minimap.minimap-canvas-wrap(v-if="minimapIsVisible")
-    MinimapCanvas(:visible="true" :size="minimapSize" :preventAnimation="!(isPanning || isPanningReady)")
+  .left-bottom-stack(v-if="leftBottomStackIsVisible")
+    SpaceZoom
+    #space-minimap.minimap-canvas-wrap(v-if="minimapIsVisible")
+      MinimapCanvas(:visible="true" :size="minimapSize" :preventAnimation="!(isPanning || isPanningReady)")
   //- handlers
   WindowHistoryHandler
   KeyboardShortcutsHandler
@@ -1238,10 +1209,21 @@ const shouldPrevent = computed(() => {
     pointer-events none !important
     cursor default
 
-.minimap-canvas-wrap
+.left-bottom-stack
   position fixed
-  right 8px
+  left 8px
   bottom 42px
+  display flex
+  flex-direction column
+  align-items flex-start
+  gap 6px
+  z-index 999997
+  pointer-events none
+  .space-zoom
+    pointer-events auto
+
+.minimap-canvas-wrap
+  pointer-events auto
 
 #box-backgrounds,
 #box-infos

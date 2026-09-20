@@ -7,7 +7,6 @@ import { useCardStore } from '@/stores/useCardStore'
 import { useListStore } from '@/stores/useListStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useSpaceStore } from '@/stores/useSpaceStore'
-import { useApiStore } from '@/stores/useApiStore'
 import { useBroadcastStore } from '@/stores/useBroadcastStore'
 
 import utils from '@/utils.js'
@@ -191,7 +190,6 @@ export const useBoxStore = defineStore('boxes', {
     },
     async createBox (box, isResizing) {
       const globalStore = useGlobalStore()
-      const apiStore = useApiStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
       if (spaceStore.getShouldPreventAddFreeCard) {
@@ -206,7 +204,6 @@ export const useBoxStore = defineStore('boxes', {
         globalStore.currentUserIsResizingBox = true
         globalStore.currentUserIsResizingBoxIds = [box.id]
       }
-      await apiStore.addToQueue({ name: 'createBox', body: box })
     },
 
     // update
@@ -227,16 +224,12 @@ export const useBoxStore = defineStore('boxes', {
       // }
     },
     async updateBoxes (updates) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
       if (!userStore.getUserCanEditSpace) { return }
       this.updateBoxesState(updates)
       broadcastStore.update({ updates, store: 'boxStore', action: 'updateBoxesState' })
-      for (const box of updates) {
-        await apiStore.addToQueue({ name: 'updateBox', body: box })
-      }
       await cache.updateSpace('boxes', this.getAllBoxes, spaceStore.id)
     },
     async updateBox (update) {
@@ -258,7 +251,6 @@ export const useBoxStore = defineStore('boxes', {
       }
     },
     async removeBoxes (ids) {
-      const apiStore = useApiStore()
       const userStore = useUserStore()
       const spaceStore = useSpaceStore()
       const broadcastStore = useBroadcastStore()
@@ -267,7 +259,6 @@ export const useBoxStore = defineStore('boxes', {
       const updates = []
       for (const id of ids) {
         this.removeBoxFromState(id)
-        await apiStore.addToQueue({ name: 'removeBox', body: { id } })
         broadcastStore.update({ updates: ids, store: 'boxStore', action: 'removeBoxesRemote' })
       }
       const boxes = ids.map(id => this.getBox(id))
@@ -447,7 +438,6 @@ export const useBoxStore = defineStore('boxes', {
       this.updateBoxInfoDimensions(update)
     },
     async toggleOtherSpaceBoxChecked (box, value) {
-      const apiStore = useApiStore()
       let { id, name, spaceId } = box
       const checkbox = utils.checkboxFromString(name)
       name = name.replace(checkbox, '')
@@ -462,7 +452,7 @@ export const useBoxStore = defineStore('boxes', {
         nameUpdatedAt: new Date(),
         spaceId
       }
-      await apiStore.updateBox(update)
+      await cache.updateBoxInSpace(spaceId, update)
     },
     markAllCheckboxBoxesChecked () {
       const boxes = this.getAllBoxes

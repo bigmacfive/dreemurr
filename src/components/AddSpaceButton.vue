@@ -65,7 +65,7 @@ const addSpace = () => {
 .button-wrap
   .add-space-buttons
     a(href="/new" @click.left.stop.prevent="addNewSpace" title="New Space (N)")
-      button.success(:class="{ 'small-button': props.isSmall }")
+      button.add-space-button(:class="{ 'small-button': props.isSmall }")
         img.icon.add(src="@/assets/add.svg")
 </template>
 
@@ -74,4 +74,13 @@ const addSpace = () => {
   img.down-arrow
     padding 0
     vertical-align 2px
+  button.add-space-button
+    background var(--brand)
+    &:hover,
+    &.hover,
+    &:focus
+      background var(--brand-hover)
+    &:active,
+    &.active
+      background var(--brand-active)
 </style>
