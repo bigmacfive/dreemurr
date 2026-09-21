@@ -129,14 +129,13 @@ jobs:
             echo "No signed desktop artifacts to release"
             exit 1
           fi
-          NOTES='Signed desktop build of dreemurr.
-
-- **macOS:** Developer ID signed and notarized DMG
-- **Windows:** NSIS installer
-
-macOS builds should open without a Gatekeeper warning.
-Windows requires WebView2 (usually already on Windows 10/11).'
           gh release create "$GITHUB_REF_NAME" "${files[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --title "dreemurr ${GITHUB_REF_NAME#v}" \
-            --notes "$NOTES"
+            --notes "Signed desktop build of dreemurr.
+
+          - **macOS:** Developer ID signed and notarized DMG
+          - **Windows:** NSIS installer
+
+          macOS builds should open without a Gatekeeper warning.
+          Windows requires WebView2 (usually already on Windows 10/11)."
