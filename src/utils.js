@@ -2844,10 +2844,16 @@ export default {
       }, type, quality)
     })
   },
-  async imageBitmapFromFile (file) {
+  async imageBitmapFromFile (file, size) {
+    const options = {}
+    if (size?.width && size?.height) {
+      options.resizeWidth = size.width
+      options.resizeHeight = size.height
+      options.resizeQuality = 'high'
+    }
     if (typeof createImageBitmap === 'function') {
       try {
-        return await createImageBitmap(file)
+        return await createImageBitmap(file, options)
       } catch (error) {}
     }
     return await new Promise((resolve, reject) => {
@@ -2864,14 +2870,32 @@ export default {
       image.src = url
     })
   },
+  flattenCanvasOntoWhite (canvas) {
+    const flat = document.createElement('canvas')
+    flat.width = canvas.width
+    flat.height = canvas.height
+    const context = flat.getContext('2d')
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, flat.width, flat.height)
+    context.drawImage(canvas, 0, 0)
+    return flat
+  },
   async encodeCompressedCanvas (canvas, quality) {
-    const preferredType = consts.pastedImage.mimeType
+    const candidates = []
     try {
-      const blob = await this.canvasToBlob(canvas, preferredType, quality)
-      if (blob) { return { blob, type: preferredType } }
+      const webp = await this.canvasToBlob(canvas, 'image/webp', quality)
+      if (webp) { candidates.push({ blob: webp, type: 'image/webp' }) }
     } catch (error) {}
-    const blob = await this.canvasToBlob(canvas, 'image/jpeg', quality)
-    return { blob, type: 'image/jpeg' }
+    try {
+      const jpeg = await this.canvasToBlob(this.flattenCanvasOntoWhite(canvas), 'image/jpeg', quality)
+      if (jpeg) { candidates.push({ blob: jpeg, type: 'image/jpeg' }) }
+    } catch (error) {}
+    if (!candidates.length) {
+      throw new Error('image encode failed')
+    }
+    return candidates.reduce((smallest, next) => {
+      return next.blob.size < smallest.blob.size ? next : smallest
+    })
   },
   async compressImageFile (file, options = {}) {
     if (!this.shouldCompressImageFile(file)) { return file }
@@ -2879,8 +2903,9 @@ export default {
     const maxBytes = options.maxBytes || consts.pastedImage.maxBytes
     let quality = options.quality || consts.pastedImage.quality
     const minQuality = options.minQuality || consts.pastedImage.minQuality
+    const minEdge = options.minEdge || consts.pastedImage.minEdge
     try {
-      const source = await this.imageBitmapFromFile(file)
+      let source = await this.imageBitmapFromFile(file)
       const sourceWidth = source.width
       const sourceHeight = source.height
       let { width, height } = this.scaledImageSize({
@@ -2888,34 +2913,37 @@ export default {
         height: sourceHeight,
         maxEdge
       })
-      const alreadySmall = file.size <= maxBytes && width === sourceWidth && height === sourceHeight
-      if (alreadySmall && (file.type === 'image/jpeg' || file.type === 'image/webp')) {
-        source.close?.()
-        return file
+      if (width !== sourceWidth || height !== sourceHeight) {
+        const resized = await this.imageBitmapFromFile(file, { width, height })
+        if (resized && resized !== source) {
+          source.close?.()
+          source = resized
+        }
       }
       const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
+      const context = canvas.getContext('2d', { alpha: true })
       const draw = (nextWidth, nextHeight) => {
         canvas.width = nextWidth
         canvas.height = nextHeight
-        context.fillStyle = '#ffffff'
-        context.fillRect(0, 0, nextWidth, nextHeight)
+        context.clearRect(0, 0, nextWidth, nextHeight)
+        context.imageSmoothingEnabled = true
+        context.imageSmoothingQuality = 'medium'
         context.drawImage(source, 0, 0, nextWidth, nextHeight)
       }
       draw(width, height)
       let encoded = await this.encodeCompressedCanvas(canvas, quality)
       while (encoded.blob.size > maxBytes && quality > minQuality) {
-        quality = Math.max(minQuality, Number((quality - 0.08).toFixed(2)))
+        quality = Math.max(minQuality, Number((quality - 0.1).toFixed(2)))
         encoded = await this.encodeCompressedCanvas(canvas, quality)
       }
-      while (encoded.blob.size > maxBytes && Math.max(width, height) > 640) {
-        width = Math.max(1, Math.round(width * 0.85))
-        height = Math.max(1, Math.round(height * 0.85))
+      while (encoded.blob.size > maxBytes && Math.max(width, height) > minEdge) {
+        width = Math.max(1, Math.round(width * 0.75))
+        height = Math.max(1, Math.round(height * 0.75))
         draw(width, height)
         encoded = await this.encodeCompressedCanvas(canvas, quality)
       }
       source.close?.()
-      if (file.size && encoded.blob.size >= file.size && width === sourceWidth) {
+      if (file.size && encoded.blob.size >= file.size && width === sourceWidth && (file.type === encoded.type)) {
         return file
       }
       const extension = encoded.type === 'image/jpeg' ? 'jpg' : encoded.type.split('/')[1]

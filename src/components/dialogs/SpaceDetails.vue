@@ -73,10 +73,8 @@ const state = reactive({
 
 const init = async () => {
   closeDialogs()
-  if (!state.spaces.length) {
-    updateLocalSpaces()
-    updateHeights()
-  }
+  await updateLocalSpaces()
+  updateHeights()
   await updateWithRemoteSpaces()
   updateHeights()
   spaceStore.updateSpacePreviewImage()

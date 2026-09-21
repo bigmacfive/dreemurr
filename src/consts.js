@@ -29,10 +29,11 @@ export default {
   freeUploadSizeLimit: 5, // 5mb
   upgradedUploadSizeLimit: 256, // 256mb
   pastedImage: {
-    maxEdge: 1920,
-    maxBytes: 600 * 1024,
-    quality: 0.82,
-    minQuality: 0.55,
+    maxEdge: 800,
+    minEdge: 320,
+    maxBytes: 120 * 1024,
+    quality: 0.62,
+    minQuality: 0.32,
     mimeType: 'image/webp'
   },
   emptyCard () {

@@ -9,6 +9,7 @@ import { useSpaceStore } from '@/stores/useSpaceStore'
 
 import utils from '@/utils.js'
 import consts from '@/consts.js'
+import { isDreemFileName, openDreemFileObjects } from '@/desktop/dreemFiles.js'
 
 import { nanoid } from 'nanoid'
 
@@ -138,6 +139,13 @@ export const useUploadStore = defineStore('upload', {
       const userStore = useUserStore()
       const cardStore = useCardStore()
       const globalStore = useGlobalStore()
+      const list = Array.from(files || [])
+      const dreemFiles = list.filter(file => isDreemFileName(file?.name))
+      files = list.filter(file => !isDreemFileName(file?.name))
+      if (dreemFiles.length) {
+        await openDreemFileObjects(dreemFiles)
+      }
+      if (!files.length) { return }
       position = position || utils.cursorPositionInSpace(event)
       userStore.notifyReadOnly(position)
       const canEditSpace = userStore.getUserCanEditSpace

@@ -234,15 +234,15 @@ describe('shouldCompressImageFile', () => {
 
 describe('scaledImageSize', () => {
   it('keeps images within the pasted max edge', () => {
-    expect(utils.scaledImageSize({ width: 800, height: 600, maxEdge: 1920 })).toEqual({
-      width: 800,
-      height: 600,
+    expect(utils.scaledImageSize({ width: 640, height: 480, maxEdge: 800 })).toEqual({
+      width: 640,
+      height: 480,
       scale: 1
     })
-    expect(utils.scaledImageSize({ width: 4000, height: 2000, maxEdge: 1920 })).toEqual({
-      width: 1920,
-      height: 960,
-      scale: 1920 / 4000
+    expect(utils.scaledImageSize({ width: 4000, height: 2000, maxEdge: 800 })).toEqual({
+      width: 800,
+      height: 400,
+      scale: 800 / 4000
     })
   })
 })

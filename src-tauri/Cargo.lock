@@ -695,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "dreemurr"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "log",
  "objc2",
@@ -704,6 +704,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
+ "url",
 ]
 
 [[package]]

@@ -1,7 +1,88 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
+
+struct OpenedDreemPaths(Mutex<Vec<String>>);
+
+static EARLY_OPENED_DREEM_PATHS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+fn is_dreem_path(path: &Path) -> bool {
+  path
+    .extension()
+    .and_then(|value| value.to_str())
+    .map(|value| value.eq_ignore_ascii_case("dreem"))
+    .unwrap_or(false)
+}
+
+fn path_from_open_string(raw: &str) -> Option<PathBuf> {
+  let trimmed = raw.trim();
+  if trimmed.is_empty() {
+    return None;
+  }
+  if let Ok(url) = url::Url::parse(trimmed) {
+    if url.scheme() == "file" {
+      return url.to_file_path().ok();
+    }
+  }
+  Some(PathBuf::from(trimmed))
+}
+
+fn dreem_paths_from_open_strings(values: impl IntoIterator<Item = String>) -> Vec<String> {
+  let mut paths = Vec::new();
+  for value in values {
+    let Some(path) = path_from_open_string(&value) else { continue };
+    if path.is_dir() {
+      if let Ok(relative) = dreem_filenames_in_dir(&path) {
+        for name in relative {
+          paths.push(path.join(name).to_string_lossy().into_owned());
+        }
+      }
+      continue;
+    }
+    if !is_dreem_path(&path) {
+      continue;
+    }
+    paths.push(path.to_string_lossy().into_owned());
+  }
+  paths
+}
+
+fn store_opened_dreem_paths(app: Option<&tauri::AppHandle>, paths: Vec<String>) {
+  if paths.is_empty() {
+    return;
+  }
+  if let Some(app) = app {
+    if let Some(state) = app.try_state::<OpenedDreemPaths>() {
+      if let Ok(mut pending) = state.0.lock() {
+        pending.extend(paths.clone());
+      }
+      let _ = app.emit("dreem-open", paths);
+      return;
+    }
+  }
+  if let Ok(mut pending) = EARLY_OPENED_DREEM_PATHS.lock() {
+    pending.extend(paths);
+  }
+}
+
+fn take_opened_dreem_paths(app: &tauri::AppHandle) -> Vec<String> {
+  let mut paths = EARLY_OPENED_DREEM_PATHS
+    .lock()
+    .map(|mut pending| std::mem::take(&mut *pending))
+    .unwrap_or_default();
+  if let Some(state) = app.try_state::<OpenedDreemPaths>() {
+    if let Ok(mut pending) = state.0.lock() {
+      paths.extend(pending.drain(..));
+    }
+  }
+  paths
+}
+
+fn dreem_paths_from_cli_args() -> Vec<String> {
+  dreem_paths_from_open_strings(std::env::args().skip(1).filter(|value| !value.starts_with('-')))
+}
 
 fn documents_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
   app.path().document_dir().map_err(|error| error.to_string())
@@ -38,41 +119,67 @@ fn migrate_root_dreem_files(app: &tauri::AppHandle) -> Result<(), String> {
 }
 
 fn sanitize_dreem_filename(filename: &str) -> Result<String, String> {
-  let safe_name = filename
+  let safe_name = filename.replace('\\', "/");
+  if safe_name.contains("..") || safe_name.starts_with('/') {
+    return Err("invalid dreem filename".into());
+  }
+  let safe_name = safe_name
     .chars()
-    .filter(|character| !matches!(character, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
-    .collect::<String>()
-    .replace("..", "");
-  if !safe_name.ends_with(".dreem") || safe_name.trim() == ".dreem" {
+    .filter(|character| !matches!(character, ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+    .collect::<String>();
+  if !safe_name.to_ascii_lowercase().ends_with(".dreem") || safe_name.trim() == ".dreem" {
     return Err("filename must end with .dreem".into());
   }
   Ok(safe_name)
 }
 
 fn dreem_path(app: &tauri::AppHandle, filename: &str) -> Result<PathBuf, String> {
-  Ok(dreemurr_dir(app)?.join(sanitize_dreem_filename(filename)?))
+  let dir = dreemurr_dir(app)?;
+  let path = dir.join(sanitize_dreem_filename(filename)?);
+  if !path.starts_with(&dir) {
+    return Err("invalid dreem filename".into());
+  }
+  Ok(path)
 }
 
+const MAX_DREEM_WALK_DEPTH: usize = 8;
+
 pub fn dreem_filenames_in_dir(dir: &std::path::Path) -> Result<Vec<String>, String> {
-  let entries = match fs::read_dir(dir) {
-    Ok(entries) => entries,
-    Err(_) => return Ok(Vec::new())
-  };
   let mut names = Vec::new();
-  for entry in entries.flatten() {
-    let path = entry.path();
-    if !path.is_file() {
-      continue;
-    }
-    if path.extension().and_then(|value| value.to_str()) != Some("dreem") {
-      continue;
-    }
-    if let Some(name) = path.file_name().and_then(|value| value.to_str()) {
-      names.push(name.to_string());
-    }
-  }
+  collect_dreem_filenames(dir, dir, 0, &mut names)?;
   names.sort();
   Ok(names)
+}
+
+fn collect_dreem_filenames(
+  dir: &Path,
+  root: &Path,
+  depth: usize,
+  names: &mut Vec<String>,
+) -> Result<(), String> {
+  if depth > MAX_DREEM_WALK_DEPTH {
+    return Ok(());
+  }
+  let entries = match fs::read_dir(dir) {
+    Ok(entries) => entries,
+    Err(_) => return Ok(())
+  };
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if path.is_dir() {
+      collect_dreem_filenames(&path, root, depth + 1, names)?;
+      continue;
+    }
+    if !path.is_file() || !is_dreem_path(&path) {
+      continue;
+    }
+    if let Ok(relative) = path.strip_prefix(root) {
+      if let Some(name) = relative.to_str() {
+        names.push(name.replace('\\', "/"));
+      }
+    }
+  }
+  Ok(())
 }
 
 #[tauri::command]
@@ -103,6 +210,44 @@ fn read_dreem_file(app: tauri::AppHandle, filename: String) -> Result<String, St
   migrate_root_dreem_files(&app)?;
   let path = dreem_path(&app, &filename)?;
   fs::read_to_string(path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn list_dreem_paths(path: String) -> Result<Vec<String>, String> {
+  let resolved = path_from_open_string(&path).ok_or_else(|| "invalid dreem path".to_string())?;
+  if resolved.is_file() {
+    if is_dreem_path(&resolved) {
+      return Ok(vec![resolved.to_string_lossy().into_owned()]);
+    }
+    return Ok(Vec::new());
+  }
+  if !resolved.is_dir() {
+    return Ok(Vec::new());
+  }
+  let names = dreem_filenames_in_dir(&resolved)?;
+  Ok(
+    names
+      .into_iter()
+      .map(|name| resolved.join(name).to_string_lossy().into_owned())
+      .collect(),
+  )
+}
+
+#[tauri::command]
+fn read_dreem_path(path: String) -> Result<String, String> {
+  let resolved = path_from_open_string(&path).ok_or_else(|| "invalid dreem path".to_string())?;
+  if !is_dreem_path(&resolved) {
+    return Err("path must end with .dreem".into());
+  }
+  if !resolved.is_file() {
+    return Err("dreem file was not found".into());
+  }
+  fs::read_to_string(resolved).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn opened_dreem_paths(app: tauri::AppHandle) -> Vec<String> {
+  take_opened_dreem_paths(&app)
 }
 
 #[cfg(target_os = "macos")]
@@ -152,13 +297,18 @@ unsafe fn clip_view_corners(view: *mut objc2::runtime::AnyObject, radius: f64) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .manage(OpenedDreemPaths(Mutex::new(Vec::new())))
     .invoke_handler(tauri::generate_handler![
       save_dreem_file,
       remove_dreem_file,
       list_dreem_files,
-      read_dreem_file
+      read_dreem_file,
+      read_dreem_path,
+      list_dreem_paths,
+      opened_dreem_paths
     ])
     .setup(|app| {
+      store_opened_dreem_paths(Some(app.handle()), dreem_paths_from_cli_args());
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
@@ -178,8 +328,20 @@ pub fn run() {
       }
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while running tauri application")
+    .run(|app, event| {
+      #[cfg(any(target_os = "macos", target_os = "ios"))]
+      if let tauri::RunEvent::Opened { urls } = event {
+        let paths = dreem_paths_from_open_strings(
+          urls
+            .into_iter()
+            .filter_map(|url| url.to_file_path().ok())
+            .map(|path| path.to_string_lossy().into_owned()),
+        );
+        store_opened_dreem_paths(Some(app), paths);
+      }
+    });
 }
 
 #[cfg(test)]
@@ -194,22 +356,43 @@ mod tests {
 
   #[test]
   fn strips_parent_path_segments() {
-    assert_eq!(sanitize_dreem_filename("../secret.dreem").unwrap(), "secret.dreem");
+    assert!(sanitize_dreem_filename("../secret.dreem").is_err());
+    assert_eq!(
+      sanitize_dreem_filename("projects/Garden.dreem").unwrap(),
+      "projects/Garden.dreem"
+    );
   }
 
   #[test]
   fn lists_only_dreem_files_in_a_folder() {
     use super::dreem_filenames_in_dir;
     let dir = std::env::temp_dir().join(format!("dreemurr-list-{}", std::process::id()));
+    let nested = dir.join("projects");
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("temp dir");
+    std::fs::create_dir_all(&nested).expect("temp dir");
     std::fs::write(dir.join("Alpha.dreem"), "{\"id\":\"a\"}").unwrap();
     std::fs::write(dir.join("Beta.dreem"), "{\"id\":\"b\"}").unwrap();
+    std::fs::write(nested.join("Garden.dreem"), "{\"id\":\"g\"}").unwrap();
     std::fs::write(dir.join("notes.txt"), "nope").unwrap();
     std::fs::write(dir.join("readme.md"), "nope").unwrap();
     let names = dreem_filenames_in_dir(&dir).expect("list");
     let _ = std::fs::remove_dir_all(&dir);
-    assert_eq!(names, vec!["Alpha.dreem".to_string(), "Beta.dreem".to_string()]);
+    assert_eq!(
+      names,
+      vec![
+        "Alpha.dreem".to_string(),
+        "Beta.dreem".to_string(),
+        "projects/Garden.dreem".to_string()
+      ]
+    );
+  }
+
+  #[test]
+  fn accepts_only_dreem_paths() {
+    use super::is_dreem_path;
+    assert!(is_dreem_path(std::path::Path::new("/tmp/Garden.dreem")));
+    assert!(is_dreem_path(std::path::Path::new("/tmp/Garden.DREEM")));
+    assert!(!is_dreem_path(std::path::Path::new("/tmp/notes.txt")));
   }
 
   #[test]

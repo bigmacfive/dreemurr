@@ -100,27 +100,141 @@ export const syncAllSpaces = async (spaces) => {
   }
 }
 
+export const isDreemFileName = (name) => {
+  return String(name || '').toLowerCase().endsWith('.dreem')
+}
+
+export const spaceFromDreemContents = (contents, name = '') => {
+  let parsed = contents
+  if (typeof contents === 'string') {
+    try {
+      parsed = JSON.parse(contents)
+    } catch (error) {
+      return
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { return }
+  const fallbackName = String(name || '').replace(/\.dreem$/i, '')
+  const id = parsed.id || fallbackName
+  if (!id) { return }
+  return {
+    ...parsed,
+    id,
+    name: parsed.name || fallbackName || id
+  }
+}
+
 export const spacesFromDreemFiles = (files) => {
   const spaces = []
   for (const file of files || []) {
-    const name = String(file?.name || '')
-    if (!name.toLowerCase().endsWith('.dreem')) { continue }
-    let parsed
-    try {
-      parsed = JSON.parse(file.contents)
-    } catch (error) {
-      continue
-    }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { continue }
-    const id = parsed.id || name.replace(/\.dreem$/i, '')
-    if (!id) { continue }
-    spaces.push({
-      ...parsed,
-      id,
-      name: parsed.name || name.replace(/\.dreem$/i, '')
-    })
+    if (!isDreemFileName(file?.name)) { continue }
+    const space = spaceFromDreemContents(file.contents, file.name)
+    if (space) { spaces.push(space) }
   }
   return spaces
+}
+
+const notifySpacesChanged = async () => {
+  try {
+    const { useGlobalStore } = await import('@/stores/useGlobalStore.js')
+    useGlobalStore().triggerSpaceDetailsUpdateLocalSpaces()
+  } catch (error) {
+    console.error('🚒 notifySpacesChanged', error)
+  }
+}
+
+export const openDreemSpaces = async (spaces) => {
+  if (!spaces?.length) { return [] }
+  const { default: cache } = await import('@/cache.js')
+  const { useSpaceStore } = await import('@/stores/useSpaceStore.js')
+  for (const space of spaces) {
+    await cache.saveSpace(space)
+  }
+  const spaceStore = useSpaceStore()
+  await spaceStore.changeSpace(spaces[spaces.length - 1])
+  await notifySpacesChanged()
+  return spaces
+}
+
+export const collectDreemPaths = async (paths, listDirectoryFn) => {
+  const collected = []
+  for (const path of paths || []) {
+    if (isDreemFileName(path)) {
+      collected.push(path)
+      continue
+    }
+    if (!listDirectoryFn) { continue }
+    try {
+      const nested = await listDirectoryFn(path)
+      for (const nestedPath of nested || []) {
+        if (isDreemFileName(nestedPath)) {
+          collected.push(nestedPath)
+        }
+      }
+    } catch (error) {
+      console.error('🚒 collectDreemPaths', path, error)
+    }
+  }
+  return collected
+}
+
+export const openDreemFileObjects = async (files) => {
+  const spaces = []
+  for (const file of files || []) {
+    if (!file || !isDreemFileName(file.name)) { continue }
+    try {
+      const text = typeof file.text === 'function' ? await file.text() : file.contents
+      const space = spaceFromDreemContents(text, file.name)
+      if (space) { spaces.push(space) }
+    } catch (error) {
+      console.error('🚒 openDreemFileObjects', error)
+    }
+  }
+  return openDreemSpaces(spaces)
+}
+
+export const openDreemPaths = async (paths) => {
+  const { invoke } = await import('@tauri-apps/api/core')
+  const dreemPaths = await collectDreemPaths(paths, (path) => invoke('list_dreem_paths', { path }))
+  if (!dreemPaths.length) { return [] }
+  const spaces = []
+  for (const path of dreemPaths) {
+    try {
+      const contents = await invoke('read_dreem_path', { path })
+      const name = String(path).split(/[/\\]/).pop()
+      const space = spaceFromDreemContents(contents, name)
+      if (space) { spaces.push(space) }
+    } catch (error) {
+      console.error('🚒 openDreemPaths', path, error)
+    }
+  }
+  return openDreemSpaces(spaces)
+}
+
+let listeningForOpenedDreemFiles = false
+
+export const listenForOpenedDreemFiles = async () => {
+  if (!isDesktop() || listeningForOpenedDreemFiles) { return }
+  listeningForOpenedDreemFiles = true
+  const { listen } = await import('@tauri-apps/api/event')
+  await listen('dreem-open', (event) => {
+    openDreemPaths(event.payload).catch((error) => {
+      console.error('🚒 dreem-open', error)
+    })
+  })
+  await listen('tauri://drag-drop', (event) => {
+    const paths = event.payload?.paths || []
+    openDreemPaths(paths).catch((error) => {
+      console.error('🚒 dreem drag-drop', error)
+    })
+  })
+}
+
+export const openPendingDreemFiles = async () => {
+  if (!isDesktop()) { return [] }
+  const { invoke } = await import('@tauri-apps/api/core')
+  const paths = await invoke('opened_dreem_paths')
+  return openDreemPaths(paths)
 }
 
 export const resolveSpaceToLoad = (listedSpace, cachedSpace) => {

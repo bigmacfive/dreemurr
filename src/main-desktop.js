@@ -7,6 +7,7 @@ import routerOptions from './router'
 import { useUserStore } from './stores/useUserStore'
 import cache from './cache.js'
 import consts from './consts.js'
+import { listenForOpenedDreemFiles, openPendingDreemFiles } from './desktop/dreemFiles.js'
 
 import './assets/main.styl'
 import './assets/page.styl'
@@ -21,9 +22,11 @@ app.use(createPinia())
 app.use(createRouter(routerOptions))
 app.mount('#app')
 
-useUserStore().initializeUser().then(() => {
+useUserStore().initializeUser().then(async () => {
   if (!consts.isTauri()) { return }
-  return cache.syncDreemFiles()
+  await cache.syncDreemFiles()
+  await listenForOpenedDreemFiles()
+  await openPendingDreemFiles()
 }).catch((error) => {
   console.error('🚒 initializeUser', error)
 })

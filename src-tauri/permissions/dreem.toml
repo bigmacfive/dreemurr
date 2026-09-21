@@ -1,4 +1,4 @@
 [[permission]]
 identifier = "allow-dreem-files"
-description = "Save, remove, list, and read .dreem space files in Documents/dreemurr"
-commands.allow = ["save_dreem_file", "remove_dreem_file", "list_dreem_files", "read_dreem_file"]
+description = "Save, remove, list, and read .dreem space files in Documents/dreemurr, and open dropped or Finder-opened files"
+commands.allow = ["save_dreem_file", "remove_dreem_file", "list_dreem_files", "read_dreem_file", "read_dreem_path", "list_dreem_paths", "opened_dreem_paths"]

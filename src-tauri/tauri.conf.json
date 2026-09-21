@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "dreemurr",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "identifier": "app.dreemurr.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -38,6 +38,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["dreem"],
+        "name": "dreemurr Space",
+        "description": "dreemurr space",
+        "role": "Editor",
+        "mimeType": "application/vnd.dreemurr.space"
+      }
     ],
     "macOS": {
       "minimumSystemVersion": "11.0",
