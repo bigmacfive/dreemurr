@@ -31,8 +31,11 @@ let shouldStartPanning,
 let unsubscribes
 
 onMounted(() => {
+  window.addEventListener('pointerdown', cancelMomentum)
   window.addEventListener('mousedown', cancelMomentum)
+  window.addEventListener('pointermove', checkIfShouldStartPanning, { passive: false })
   window.addEventListener('mousemove', checkIfShouldStartPanning)
+  window.addEventListener('pointerup', checkIfShouldStartMomentum)
   window.addEventListener('mouseup', checkIfShouldStartMomentum)
   window.addEventListener('wheel', cancelMomentum)
 
@@ -48,8 +51,11 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', cancelMomentum)
   window.removeEventListener('mousedown', cancelMomentum)
+  window.removeEventListener('pointermove', checkIfShouldStartPanning)
   window.removeEventListener('mousemove', checkIfShouldStartPanning)
+  window.removeEventListener('pointerup', checkIfShouldStartMomentum)
   window.removeEventListener('mouseup', checkIfShouldStartMomentum)
   window.removeEventListener('wheel', cancelMomentum)
   unsubscribes()
@@ -57,14 +63,32 @@ onBeforeUnmount(() => {
 
 // handle pointer events
 
+let handledPointerMove = false
 const checkIfShouldStartPanning = (event) => {
+  if (event?.type === 'pointermove') {
+    handledPointerMove = true
+  } else if (event?.type === 'mousemove' && handledPointerMove) {
+    handledPointerMove = false
+    return
+  }
+  const isMiddleHeld = event.buttons === 4
+  if (isMiddleHeld && !globalStore.currentUserIsPanning) {
+    globalStore.updateCurrentUserIsPanning(true)
+  }
   if (globalStore.currentUserIsPanning) {
     event.preventDefault()
     initPanning(event)
     updatePanningPosition(event)
   }
 }
-const checkIfShouldStartMomentum = () => {
+let handledPointerUp = false
+const checkIfShouldStartMomentum = (event) => {
+  if (event?.type === 'pointerup') {
+    handledPointerUp = true
+  } else if (event?.type === 'mouseup' && handledPointerUp) {
+    handledPointerUp = false
+    return
+  }
   const isPanning = Boolean(startPosition)
   if (isPanning && panningDelta) {
     startMomentum()

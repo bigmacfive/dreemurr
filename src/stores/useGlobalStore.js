@@ -426,8 +426,7 @@ export const useGlobalStore = defineStore('global', {
       if (this.dateImageUrl) {
         return this.dateImageUrl
       }
-      const origin = (typeof window !== 'undefined' && window.location?.origin) || ''
-      return `${origin}/yarr.png`
+      return utils.bundledAssetUrl('/yarr.png')
     },
     getToolbarIsDrawing () {
       return this.currentUserToolbar === 'drawing'

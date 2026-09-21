@@ -1,6 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
 import utils from './utils.js'
 
+describe('bundledAssetUrl', () => {
+  it('keeps a root-relative path', () => {
+    expect(utils.bundledAssetUrl('/yarr.png')).toBe('/yarr.png')
+  })
+
+  it('prefixes a bare filename', () => {
+    expect(utils.bundledAssetUrl('background-2x.png')).toBe('/background-2x.png')
+  })
+
+  it('returns empty string for a missing path', () => {
+    expect(utils.bundledAssetUrl()).toBe('')
+    expect(utils.bundledAssetUrl('')).toBe('')
+  })
+})
+
 describe('clearTrailingSlash', () => {
   it('removes trailing slash from string', () => {
     const result = utils.clearTrailingSlash('https://example.com/')
@@ -146,6 +161,16 @@ describe('urlsFromString', () => {
     const dataUrl = 'data:image/png;base64,iVBORw0KGgo='
     const result = utils.urlsFromString(`yarr ${dataUrl}`)
     expect(result).toEqual([dataUrl])
+  })
+
+  it('extracts a bundled root-relative image path', () => {
+    const result = utils.urlsFromString('yarr /yarr.png')
+    expect(result).toEqual(['/yarr.png'])
+  })
+
+  it('does not treat a remote image path as a bundled asset twice', () => {
+    const result = utils.urlsFromString('https://cdn.example.com/yarr.png')
+    expect(result).toEqual(['https://cdn.example.com/yarr.png'])
   })
 })
 

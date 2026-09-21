@@ -69,6 +69,17 @@ export default {
     const urlPattern = /^https:\/\/.+\.kinopio\.club\/?/i
     return urlPattern.test(url)
   },
+  bundledAssetUrl (path) {
+    if (!path) { return '' }
+    return path.startsWith('/') ? path : `/${path}`
+  },
+  bundledAssetPattern () {
+    return /(^|\n| )(\/[\w./-]+\.(?:gif|jpg|jpeg|jpe|jif|jfif|png|svg|webp|avif|heic))(?=\n| |\?|&|$)/igm
+  },
+  urlIsBundledAsset (url) {
+    if (!url) { return }
+    return url.startsWith('/') && Boolean(this.urlIsImage(url))
+  },
   imgproxyUrl (url, maxDimensions) {
     if (!this.isKinopioUploadUrl(url)) {
       return url
@@ -2350,6 +2361,11 @@ export default {
     }
     string = this.removeMarkdownCodeblocksFromString(string)
     const dataImageUrls = string.match(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+/g) || []
+    const bundledAssets = []
+    string.replace(this.bundledAssetPattern(), (full, prefix, path) => {
+      bundledAssets.push(path)
+      return full
+    })
     // matches multiple urls and returns [urls]
     // https://regexr.com/59m5t
     // start, newline, or space
@@ -2361,7 +2377,7 @@ export default {
     const urlPattern = new RegExp(/(^|\n| )(http[s]?:\/\/)[^\s(["<>]{1,}(\.|(:[0-9]+))[^\s."><]+[\w=.!]+\/?-?/igm)
     const localhostUrls = string.match(this.localhostUrlPattern()) || []
     let urls = string.match(urlPattern) || []
-    urls = urls.concat(localhostUrls, dataImageUrls)
+    urls = urls.concat(localhostUrls, dataImageUrls, bundledAssets)
     urls = urls.filter(url => Boolean(url))
     if (!urls.length) { return }
     // filter out empty or non-urls
@@ -2378,7 +2394,8 @@ export default {
     urls = urls.map(url => {
       const isFile = this.urlIsFile(url)
       const hasProtocol = this.urlHasProtocol(url)
-      if (isFile || hasProtocol) {
+      const isBundledAsset = this.urlIsBundledAsset(url)
+      if (isFile || hasProtocol || isBundledAsset) {
         return url
       }
     })

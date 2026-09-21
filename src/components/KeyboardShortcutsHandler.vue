@@ -37,14 +37,20 @@ let spaceKeyIsDown = false
 
 let prevCursorPosition, currentCursorPosition, prevRightClickPosition, prevRightClickTime
 let unsubscribes
+let handledPointerDown = false
+let handledPointerUp = false
+const pointerEventOptions = { capture: true, passive: false }
 
 onMounted(() => {
   window.addEventListener('keyup', handleShortcutsOnKeyUp)
   // event.metaKey only works on keydown
   window.addEventListener('keydown', handleShortcutsOnKeyDown)
-  window.addEventListener('mousedown', handleMouseDownEvents)
+  window.addEventListener('pointerdown', handlePointerDownEvents, pointerEventOptions)
+  window.addEventListener('mousedown', handleMouseDownFallback)
   window.addEventListener('mousemove', handleMouseMoveEvents)
-  window.addEventListener('mouseup', handleMouseUpEvents)
+  window.addEventListener('pointerup', handlePointerUpEvents, pointerEventOptions)
+  window.addEventListener('mouseup', handleMouseUpFallback)
+  window.addEventListener('auxclick', handleAuxClickEvents, pointerEventOptions)
   window.addEventListener('scroll', handleScrollEvents)
   window.addEventListener('contextmenu', handleContextMenuEvents)
   window.addEventListener('copy', handleCopyCutEvent)
@@ -80,9 +86,12 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keyup', handleShortcutsOnKeyUp)
   window.removeEventListener('keydown', handleShortcutsOnKeyDown)
-  window.removeEventListener('mousedown', handleMouseDownEvents)
+  window.removeEventListener('pointerdown', handlePointerDownEvents, pointerEventOptions)
+  window.removeEventListener('mousedown', handleMouseDownFallback)
   window.removeEventListener('mousemove', handleMouseMoveEvents)
-  window.removeEventListener('mouseup', handleMouseUpEvents)
+  window.removeEventListener('pointerup', handlePointerUpEvents, pointerEventOptions)
+  window.removeEventListener('mouseup', handleMouseUpFallback)
+  window.removeEventListener('auxclick', handleAuxClickEvents, pointerEventOptions)
   window.removeEventListener('scroll', handleScrollEvents)
   window.removeEventListener('copy', handleCopyCutEvent)
   window.removeEventListener('cut', handleCopyCutEvent)
@@ -363,12 +372,40 @@ const checkShouldBoxSelect = (isPanScope) => {
     !globalStore.currentUserIsDraggingList
   return shouldBoxSelect
 }
+const handlePointerDownEvents = (event) => {
+  handledPointerDown = true
+  handleMouseDownEvents(event)
+}
+const handleMouseDownFallback = (event) => {
+  if (handledPointerDown) {
+    handledPointerDown = false
+    return
+  }
+  handleMouseDownEvents(event)
+}
+const handlePointerUpEvents = (event) => {
+  handledPointerUp = true
+  handleMouseUpEvents(event)
+}
+const handleMouseUpFallback = (event) => {
+  if (handledPointerUp) {
+    handledPointerUp = false
+    return
+  }
+  handleMouseUpEvents(event)
+}
+const handleAuxClickEvents = (event) => {
+  const middleMouseButton = 1
+  if (event.button === middleMouseButton) {
+    event.preventDefault()
+  }
+}
 const handleMouseDownEvents = (event) => {
   const rightMouseButton = 2
   const middleMouseButton = 1
   const rightAndLeftButtons = 3
   const isRightClick = rightMouseButton === event.button
-  const isMiddleClick = middleMouseButton === event.button
+  const isMiddleClick = middleMouseButton === event.button || event.buttons === 4
   const isRightAndLeftClick = rightAndLeftButtons === event.buttons
   const isPanScope = checkIsPanScope(event)
   const shouldBoxSelect = checkShouldBoxSelect(isPanScope)
