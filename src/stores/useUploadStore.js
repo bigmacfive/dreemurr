@@ -107,14 +107,19 @@ export const useUploadStore = defineStore('upload', {
       })
     },
     async storeLocalFile (file) {
+      file = await utils.normalizePastedImageFile(file)
       const type = file.type || utils.imageFileTypeFromName(file)
       if (type && type !== file.type) {
         file = new File([file], file.name || `pasted.${type.replace('image/', '')}`, { type })
+      }
+      if (utils.shouldCompressImageFile(file)) {
+        file = await utils.compressImageFile(file)
       }
       return this.fileToDataUrl(file)
     },
     async uploadFile ({ file, cardId, spaceId, boxId }) {
       const cardStore = useCardStore()
+      file = await utils.normalizePastedImageFile(file)
       this.checkIfFileTypeBlocked(file)
       this.addPendingUpload({ cardId, spaceId, boxId, fileName: file.name, isGif: utils.isGifFile(file) })
       try {

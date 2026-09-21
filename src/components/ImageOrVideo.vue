@@ -177,10 +177,16 @@ const updateIsPlaying = () => {
     pause()
   }
 }
+const shouldPauseGif = () => {
+  // desktop WKWebView often reports blur/unfocus while the window is still visible
+  if (consts.isTauri()) { return false }
+  if (globalStore.disableViewportOptimizations) { return false }
+  return true
+}
 const pauseGif = () => {
   // adapted from https://stackoverflow.com/a/24707088
   // create canvas element from first frame of video
-  if (globalStore.disableViewportOptimizations) { return }
+  if (!shouldPauseGif()) { return }
   if (!imageIsGif.value) { return }
   if (canvasElement()) { return } // already paused
   const image = imageElement.value
@@ -218,13 +224,21 @@ const canvasElement = () => {
   return canvasElement
 }
 const playGif = () => {
-  // remove pause canvas
-  if (globalStore.disableViewportOptimizations) { return }
   if (!imageIsGif.value) { return }
   const canvas = canvasElement()
-  if (!canvas) { return }
-  canvas.remove()
-  imageElement.value.style.opacity = 1
+  const image = imageElement.value
+  if (canvas) {
+    canvas.remove()
+    if (image) {
+      image.style.opacity = 1
+      const src = image.getAttribute('src')
+      if (src) { image.src = src }
+    }
+    return
+  }
+  if (image) {
+    image.style.opacity = 1
+  }
 }
 const updateCanvasSelectedClass = () => {
   if (!globalStore.currentUserIsPaintSelecting) { return }
@@ -292,7 +306,7 @@ img.image(
     border-radius var(--entity-radius)
     display block
     -webkit-touch-callout none // prevents safari mobile press-and-hold from interrupting
-    content-visibility auto
+    content-visibility visible
     &.is-gif
       content-visibility visible
     &.selected

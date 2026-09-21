@@ -9,11 +9,14 @@ const panning = readFileSync(resolve(import.meta.dirname, 'components/Panning.vu
 const publicDir = resolve(import.meta.dirname, '../public')
 
 describe('tauri two-finger trackpad pan', () => {
-  it('keeps body overflow auto so window.scroll pans the space', () => {
+  it('keeps body overflow scroll on both axes so window.scroll can pan horizontally', () => {
     const tauriBlock = mainStyl.split('&.is-tauri')[1]
     expect(tauriBlock).toBeTruthy()
+    expect(tauriBlock).toMatch(/overflow-x scroll/)
+    expect(tauriBlock).toMatch(/overflow-y scroll/)
     const bodyBlock = tauriBlock.split('body')[1]?.split('#app')[0] || ''
-    expect(bodyBlock).toMatch(/overflow auto/)
+    expect(bodyBlock).toMatch(/overflow-x scroll/)
+    expect(bodyBlock).toMatch(/overflow-y scroll/)
     expect(bodyBlock).not.toMatch(/overflow hidden/)
   })
 
@@ -38,10 +41,9 @@ describe('tauri two-finger trackpad pan', () => {
     expect(scrollHandler).toMatch(/if \(!isMeta\) \{[\s\S]*?return\s*\}[\s\S]*?event\.preventDefault\(\)/)
   })
 
-  it('falls back to panSpaceBy on tauri when native wheel does not move', () => {
-    expect(scrollHandler).toContain('applyTauriWheelPan')
-    expect(scrollHandler).toMatch(/if \(!consts\.isTauri\(\)\) \{ return \}/)
-    expect(scrollHandler).toContain('globalStore.panSpaceBy({ x: deltaX, y: deltaY })')
+  it('pans tauri two-finger wheel with space offset so left and right can move', () => {
+    expect(scrollHandler).toContain('if (consts.isTauri())')
+    expect(scrollHandler).toContain('globalStore.panSpaceBy({ x: event.deltaX, y: event.deltaY })')
   })
 })
 
@@ -112,20 +114,46 @@ describe('space zoom offset', () => {
     expect(space).toMatch(/#box-infos[\s\S]*inset 0/)
   })
 
-  it('grows outside space offset when pan would scroll past the origin', () => {
-    expect(globalStore).toContain('panSpaceBy')
-    expect(globalStore).toContain('canGrowOffset: this.spaceZoomPercent < consts.spaceZoom.default')
+  it('pans from client movement so horizontal drag is not clamped by page scroll', () => {
+    expect(panning).toContain('lastClient.x - event.clientX')
     expect(panning).toContain('globalStore.panSpaceBy(panningDelta)')
-    expect(panning).toContain('startPosition.x += offsetDelta.x')
   })
 })
 
 describe('overlay scrollbars', () => {
-  it('keeps document scrollbars overlay so drawing a box does not steal viewport', () => {
+  it('hides document scrollbars completely without reserving a gutter', () => {
     expect(mainStyl).toMatch(/overflow overlay/)
-    expect(mainStyl).toMatch(/scrollbar-gutter auto/)
-    expect(mainStyl).toMatch(/--scrollbar-size 6px/)
-    expect(mainStyl).not.toMatch(/border 2px solid transparent/)
+    expect(mainStyl).toMatch(/scrollbar-width none/)
+    expect(mainStyl).toMatch(/::-webkit-scrollbar[\s\S]*display none/)
+    expect(mainStyl).not.toMatch(/--scrollbar-size/)
+    expect(mainStyl).not.toMatch(/html\.is-scrolling/)
+    expect(mainStyl).not.toMatch(/scrollbar-gutter/)
+  })
+
+  it('keeps the unscaled page in document flow like Kinopio so window.scroll can pan', () => {
+    const space = readFileSync(resolve(import.meta.dirname, 'views/Space.vue'), 'utf8')
+    expect(space).toMatch(/Math\.max\(globalStore\.pageWidth \* zoom \+ offset\.x, globalStore\.pageWidth, globalStore\.viewportWidth\)/)
+    expect(space).toMatch(/position relative \/\/ used by svg connections/)
+  })
+})
+
+describe('pasted image compression', () => {
+  it('compresses local image files before they become card data URLs', () => {
+    const uploadStore = readFileSync(resolve(import.meta.dirname, 'stores/useUploadStore.js'), 'utf8')
+    const constsSource = readFileSync(resolve(import.meta.dirname, 'consts.js'), 'utf8')
+    expect(constsSource).toMatch(/pastedImage/)
+    expect(constsSource).toMatch(/maxEdge: 1920/)
+    expect(uploadStore).toContain('utils.compressImageFile(file)')
+    expect(uploadStore).toContain('utils.normalizePastedImageFile(file)')
+  })
+})
+
+describe('gif playback', () => {
+  it('does not pause gifs when the tauri window reports blur', () => {
+    const media = readFileSync(resolve(import.meta.dirname, 'components/ImageOrVideo.vue'), 'utf8')
+    expect(media).toContain('shouldPauseGif')
+    expect(media).toMatch(/if \(consts\.isTauri\(\)\) \{ return false \}/)
+    expect(media).toMatch(/content-visibility visible/)
   })
 })
 

@@ -58,7 +58,10 @@ const handleMouseWheelEvents = (event) => {
   if (!isMeta) {
     moveDraggingItemsWithScroll(event)
     resizeItemsWithScroll(event)
-    applyTauriWheelPan(event)
+    if (consts.isTauri()) {
+      event.preventDefault()
+      globalStore.panSpaceBy({ x: event.deltaX, y: event.deltaY })
+    }
     return
   }
   event.preventDefault()
@@ -78,19 +81,6 @@ const handleMouseWheelEvents = (event) => {
   speed = Math.min(maxSpeed, speed)
   const origin = { x: event.clientX, y: event.clientY }
   globalStore.zoomSpace({ shouldZoomIn, shouldZoomOut, speed, origin })
-}
-
-const applyTauriWheelPan = (event) => {
-  if (!consts.isTauri()) { return }
-  const prevX = window.scrollX
-  const prevY = window.scrollY
-  const deltaX = event.deltaX
-  const deltaY = event.deltaY
-  requestAnimationFrame(() => {
-    if (window.scrollX === prevX && window.scrollY === prevY) {
-      globalStore.panSpaceBy({ x: deltaX, y: deltaY })
-    }
-  })
 }
 
 // items being dragged should follow wheel/trackpad scroll panning

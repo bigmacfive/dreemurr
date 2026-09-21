@@ -1,7 +1,7 @@
 {
   "name": "dreemurr",
   "type": "module",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "vite --host",
@@ -40,7 +40,7 @@
     "@babel/core": "^7.29.6",
     "@babel/eslint-parser": "^7.23.3",
     "@babel/preset-env": "^7.26.9",
-    "@tauri-apps/cli": "^2.11.4",
+    "@tauri-apps/cli": "^2.11.5",
     "@types/lodash-es": "^4.17.3",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/compiler-sfc": "^3.2.6",

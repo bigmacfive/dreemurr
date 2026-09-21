@@ -2248,50 +2248,25 @@ export const useGlobalStore = defineStore('global', {
     // scrolling and zoom
 
     async zoomSpaceTo ({ percent, origin }) {
-      percent = Math.max(percent, consts.spaceZoom.min)
-      percent = Math.min(percent, consts.spaceZoom.max)
-      const prevZoom = this.getSpaceZoomDecimal
-      const zoom = percent / 100
-      if (zoom === prevZoom) { return }
+      // at >100% there should be no outside space margin
       const viewportCenter = { x: this.viewportWidth / 2, y: this.viewportHeight / 2 }
       origin = origin || viewportCenter
-      const offset = this.spaceZoomOffset
-      // space point currently under the origin
-      const point = {
-        x: (window.scrollX + origin.x - offset.x) / prevZoom,
-        y: (window.scrollY + origin.y - offset.y) / prevZoom
-      }
-      // the scroll that keeps point under the origin
-      // when it would be negative, grow the outside space offset instead, so the space shifts away from the top left
-      // when it is positive, shrink the offset back down first
-      const newOffset = { x: offset.x, y: offset.y }
-      const scroll = {
-        x: (point.x * zoom) + offset.x - origin.x,
-        y: (point.y * zoom) + offset.y - origin.y
-      }
-      const axes = ['x', 'y']
-      axes.forEach(axis => {
-        if (scroll[axis] < 0) {
-          newOffset[axis] = offset[axis] - scroll[axis]
-          scroll[axis] = 0
-        } else {
-          const delta = Math.min(offset[axis], scroll[axis])
-          newOffset[axis] = offset[axis] - delta
-          scroll[axis] = scroll[axis] - delta
-        }
+      const result = utils.computeSpaceZoomTo({
+        percent,
+        origin,
+        prevZoom: this.getSpaceZoomDecimal,
+        offset: this.spaceZoomOffset,
+        scroll: { x: window.scrollX, y: window.scrollY },
+        min: consts.spaceZoom.min,
+        max: consts.spaceZoom.max,
+        defaultPercent: consts.spaceZoom.default
       })
-      // at >100% there should be no outside space margin
-      if (percent >= consts.spaceZoom.default) {
-        axes.forEach(axis => {
-          scroll[axis] = Math.max(scroll[axis] - newOffset[axis], 0)
-          newOffset[axis] = 0
-        })
-      }
-      this.spaceZoomPercent = percent
-      this.spaceZoomOffset = newOffset
+      if (!result) { return }
+      this.spaceZoomPercent = result.percent
+      this.spaceZoomOffset = result.offset
       // scroll after the scaled space renders, otherwise scrollTo clamps to the old space size
       await nextTick()
-      window.scrollTo(scroll.x, scroll.y)
+      window.scrollTo(result.scroll.x, result.scroll.y)
     },
     zoomSpace ({ shouldZoomIn, shouldZoomOut, speed, origin }) {
       let percent = this.spaceZoomPercent
@@ -2307,23 +2282,17 @@ export const useGlobalStore = defineStore('global', {
     panSpaceBy (delta) {
       if (!delta) { return { offsetDelta: { x: 0, y: 0 } } }
       const prevOffset = this.spaceZoomOffset
-      const result = utils.applySpacePanDelta({
-        offset: prevOffset,
-        scroll: { x: window.scrollX, y: window.scrollY },
-        delta,
-        canGrowOffset: this.spaceZoomPercent < consts.spaceZoom.default
-      })
-      const offsetDelta = {
-        x: result.offset.x - prevOffset.x,
-        y: result.offset.y - prevOffset.y
+      const nextOffset = {
+        x: (prevOffset?.x || 0) - (delta.x || 0),
+        y: (prevOffset?.y || 0) - (delta.y || 0)
       }
-      if (offsetDelta.x || offsetDelta.y) {
-        this.spaceZoomOffset = result.offset
+      this.spaceZoomOffset = nextOffset
+      return {
+        offsetDelta: {
+          x: nextOffset.x - (prevOffset?.x || 0),
+          y: nextOffset.y - (prevOffset?.y || 0)
+        }
       }
-      if (result.scroll.x !== window.scrollX || result.scroll.y !== window.scrollY) {
-        window.scrollTo(result.scroll.x, result.scroll.y)
-      }
-      return { offsetDelta }
     },
 
     // toolbar mode

@@ -288,6 +288,7 @@ const appPageWidth = computed(() => {
   if (!isSpacePage.value) { return }
   const zoom = globalStore.getSpaceZoomDecimal
   const offset = globalStore.spaceZoomOffset
+  // Kinopio: keep the unscaled page in document flow so window.scroll can pan
   return Math.max(globalStore.pageWidth * zoom + offset.x, globalStore.pageWidth, globalStore.viewportWidth)
 })
 const appPageHeight = computed(() => {
@@ -1199,7 +1200,7 @@ const shouldPrevent = computed(() => {
 <style lang="stylus">
 .space
   width 100%
-  height 100vh
+  height 100%
   pointer-events none // so that painting can receive events
   position relative // used by svg connections
   transform-origin top left

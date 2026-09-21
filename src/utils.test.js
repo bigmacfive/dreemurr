@@ -1,6 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
 import utils from './utils.js'
 
+describe('cursorPositionInPage', () => {
+  it('uses client coordinates plus scroll so horizontal pan can move', () => {
+    vi.stubGlobal('scrollX', 40)
+    vi.stubGlobal('scrollY', 12)
+    const position = utils.cursorPositionInPage({
+      clientX: 80,
+      clientY: 20,
+      pageX: 0,
+      pageY: 0
+    })
+    expect(position).toEqual({ x: 120, y: 32 })
+    vi.unstubAllGlobals()
+  })
+})
+
 describe('bundledAssetUrl', () => {
   it('keeps a root-relative path', () => {
     expect(utils.bundledAssetUrl('/yarr.png')).toBe('/yarr.png')
@@ -194,6 +209,53 @@ describe('urlIsGif', () => {
   })
 })
 
+describe('shouldCompressImageFile', () => {
+  it('compresses still images and skips gifs and svgs', () => {
+    expect(utils.shouldCompressImageFile(new File(['x'], 'shot.png', { type: 'image/png' }))).toBe(true)
+    expect(utils.shouldCompressImageFile(new File(['x'], 'shot.jpg', { type: 'image/jpeg' }))).toBe(true)
+    expect(utils.shouldCompressImageFile(new File(['x'], 'anim.gif', { type: 'image/gif' }))).toBe(false)
+    expect(utils.shouldCompressImageFile(new File(['x'], 'mark.svg', { type: 'image/svg+xml' }))).toBe(false)
+  })
+})
+
+describe('scaledImageSize', () => {
+  it('keeps images within the pasted max edge', () => {
+    expect(utils.scaledImageSize({ width: 800, height: 600, maxEdge: 1920 })).toEqual({
+      width: 800,
+      height: 600,
+      scale: 1
+    })
+    expect(utils.scaledImageSize({ width: 4000, height: 2000, maxEdge: 1920 })).toEqual({
+      width: 1920,
+      height: 960,
+      scale: 1920 / 4000
+    })
+  })
+})
+
+describe('compressImageFile', () => {
+  it('leaves gifs unchanged', async () => {
+    const gif = new File(['GIF89a'], 'yarr.gif', { type: 'image/gif' })
+    expect(await utils.compressImageFile(gif)).toBe(gif)
+  })
+})
+
+describe('normalizePastedImageFile', () => {
+  it('treats clipboard png snapshots of gifs as gifs', async () => {
+    const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00])
+    const disguised = new File([gifBytes], 'pasted.png', { type: 'image/png' })
+    const normalized = await utils.normalizePastedImageFile(disguised)
+    expect(normalized.type).toBe('image/gif')
+    expect(normalized.name).toBe('pasted.gif')
+    expect(utils.shouldCompressImageFile(normalized)).toBe(false)
+  })
+
+  it('leaves real pngs alone', async () => {
+    const png = new File(['\x89PNG'], 'shot.png', { type: 'image/png' })
+    expect(await utils.normalizePastedImageFile(png)).toBe(png)
+  })
+})
+
 describe('fileFromClipboardEvent', () => {
   const fileOf = (type, name) => new File(['x'], name, { type })
   const itemOf = (file) => ({
@@ -361,5 +423,86 @@ describe('applySpacePanDelta', () => {
     })
     expect(result.offset).toEqual({ x: 0, y: 0 })
     expect(result.scroll).toEqual({ x: 0, y: 0 })
+  })
+})
+
+describe('computeSpaceZoomTo', () => {
+  const zoom = {
+    min: 20,
+    max: 300,
+    defaultPercent: 100
+  }
+
+  it('grows offset when zooming out from the viewport center like Kinopio', () => {
+    const result = utils.computeSpaceZoomTo({
+      percent: 40,
+      origin: { x: 400, y: 300 },
+      prevZoom: 1,
+      offset: { x: 0, y: 0 },
+      scroll: { x: 0, y: 0 },
+      ...zoom
+    })
+    expect(result.percent).toBe(40)
+    expect(result.offset).toEqual({ x: 240, y: 180 })
+    expect(result.scroll).toEqual({ x: 0, y: 0 })
+  })
+
+  it('restores offset and scroll when zooming back to 100% at the same origin', () => {
+    const result = utils.computeSpaceZoomTo({
+      percent: 100,
+      origin: { x: 400, y: 300 },
+      prevZoom: 0.4,
+      offset: { x: 240, y: 180 },
+      scroll: { x: 0, y: 0 },
+      ...zoom
+    })
+    expect(result.offset).toEqual({ x: 0, y: 0 })
+    expect(result.scroll).toEqual({ x: 0, y: 0 })
+  })
+
+  it('clears outside space margin at 100% even if offset is leftover', () => {
+    const result = utils.computeSpaceZoomTo({
+      percent: 100,
+      origin: { x: 400, y: 300 },
+      prevZoom: 0.8,
+      offset: { x: 80, y: 40 },
+      scroll: { x: 10, y: 5 },
+      ...zoom
+    })
+    expect(result.offset).toEqual({ x: 0, y: 0 })
+    expect(result.scroll.x).toBeGreaterThanOrEqual(0)
+    expect(result.scroll.y).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('wheelPanDelta', () => {
+  it('uses native scroll when the document still has room', () => {
+    const result = utils.wheelPanDelta({
+      delta: { x: 30, y: 20 },
+      scroll: { x: 10, y: 10 },
+      viewport: { width: 800, height: 600 },
+      page: { width: 2000, height: 1600 }
+    })
+    expect(result).toMatchObject({ x: 0, y: 0, canScrollX: true, canScrollY: true })
+  })
+
+  it('applies only the blocked axis so the other can native-scroll', () => {
+    const result = utils.wheelPanDelta({
+      delta: { x: -20, y: 16 },
+      scroll: { x: 0, y: 10 },
+      viewport: { width: 800, height: 600 },
+      page: { width: 2000, height: 1600 }
+    })
+    expect(result).toMatchObject({ x: -20, y: 0, canScrollX: false, canScrollY: true })
+  })
+
+  it('applies both axes at the origin when native scroll cannot move', () => {
+    const result = utils.wheelPanDelta({
+      delta: { x: -12, y: -8 },
+      scroll: { x: 0, y: 0 },
+      viewport: { width: 800, height: 600 },
+      page: { width: 800, height: 600 }
+    })
+    expect(result).toMatchObject({ x: -12, y: -8, canScrollX: false, canScrollY: false })
   })
 })

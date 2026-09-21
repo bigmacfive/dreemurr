@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, computed, onMounted, onBeforeUnmount, watch, ref, nextTick } from 'vue'
+import { onMounted, onBeforeUnmount } from 'vue'
 
 import { useGlobalStore } from '@/stores/useGlobalStore'
 
@@ -18,7 +18,7 @@ const momentumThreshold = 0.5
 
 let shouldStartPanning,
   startPosition,
-  currentPosition,
+  lastClient,
   panningTimer,
   shouldCancelPanningTimer,
   panningDelta,
@@ -103,6 +103,7 @@ const cancelMomentum = (event) => {
   if (event?.type === 'wheel') {
     shouldCancelPanningTimer = true
     startPosition = null
+    lastClient = null
     panningDelta = null
     shouldPanNextFrame = false
   }
@@ -124,10 +125,10 @@ const safariFix = () => {
 // panning
 
 const initPanning = (event) => {
-  const position = utils.cursorPositionInPage(event)
   currentScroll = { x: window.scrollX, y: window.scrollY }
   if (shouldStartPanning) {
-    startPosition = position
+    startPosition = true
+    lastClient = { x: event.clientX, y: event.clientY }
     shouldStartPanning = false
     shouldCancelPanningTimer = false
     shouldCancelMomentumTimer = false
@@ -135,25 +136,21 @@ const initPanning = (event) => {
   }
 }
 const updatePanningPosition = (event) => {
-  const position = utils.cursorPositionInPage(event)
-  if (startPosition) {
-    const delta = {
-      x: startPosition.x - position.x,
-      y: startPosition.y - position.y
-    }
-    velocity = { x: delta.x, y: delta.y }
-    panningDelta = delta
-    shouldPanNextFrame = true
+  if (!lastClient) { return }
+  const delta = {
+    x: lastClient.x - event.clientX,
+    y: lastClient.y - event.clientY
   }
+  lastClient = { x: event.clientX, y: event.clientY }
+  velocity = { x: delta.x, y: delta.y }
+  panningDelta = delta
+  shouldPanNextFrame = true
 }
+
 const panningFrame = () => {
   // scroll frame
   if (shouldPanNextFrame && panningDelta) {
-    const { offsetDelta } = globalStore.panSpaceBy(panningDelta)
-    if (startPosition && offsetDelta) {
-      startPosition.x += offsetDelta.x
-      startPosition.y += offsetDelta.y
-    }
+    globalStore.panSpaceBy(panningDelta)
     updatecurrentScrollByDelta(panningDelta)
     shouldPanNextFrame = false
   } else if (velocity) {
@@ -168,6 +165,7 @@ const panningFrame = () => {
     window.cancelAnimationFrame(panningTimer)
     panningTimer = null
     startPosition = null
+    lastClient = null
   }
 }
 

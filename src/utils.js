@@ -229,8 +229,10 @@ export default {
       x = rect.x + window.pageXOffset
       y = rect.y + window.pageYOffset
     } else {
-      x = event.pageX
-      y = event.pageY
+      // WKWebView pointer events can report a stuck pageX; client + scroll matches Kinopio page coords
+      const hasClient = Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+      x = hasClient ? event.clientX + window.scrollX : event.pageX
+      y = hasClient ? event.clientY + window.scrollY : event.pageY
     }
     return { x, y }
   },
@@ -330,6 +332,56 @@ export default {
     return {
       offset: nextOffset,
       scroll: nextScroll
+    }
+  },
+  // Kinopio zoomSpaceTo: keep the space point under origin, grow offset when scroll would go negative
+  computeSpaceZoomTo ({ percent, origin, prevZoom, offset, scroll, min, max, defaultPercent }) {
+    percent = Math.max(percent, min)
+    percent = Math.min(percent, max)
+    const zoom = percent / 100
+    if (zoom === prevZoom) { return }
+    const point = {
+      x: (scroll.x + origin.x - offset.x) / prevZoom,
+      y: (scroll.y + origin.y - offset.y) / prevZoom
+    }
+    const newOffset = { x: offset.x, y: offset.y }
+    const nextScroll = {
+      x: (point.x * zoom) + offset.x - origin.x,
+      y: (point.y * zoom) + offset.y - origin.y
+    }
+    const axes = ['x', 'y']
+    axes.forEach(axis => {
+      if (nextScroll[axis] < 0) {
+        newOffset[axis] = offset[axis] - nextScroll[axis]
+        nextScroll[axis] = 0
+      } else {
+        const delta = Math.min(offset[axis], nextScroll[axis])
+        newOffset[axis] = offset[axis] - delta
+        nextScroll[axis] = nextScroll[axis] - delta
+      }
+    })
+    if (percent >= defaultPercent) {
+      axes.forEach(axis => {
+        nextScroll[axis] = Math.max(nextScroll[axis] - newOffset[axis], 0)
+        newOffset[axis] = 0
+      })
+    }
+    return {
+      percent,
+      offset: newOffset,
+      scroll: nextScroll
+    }
+  },
+  wheelPanDelta ({ delta, scroll, viewport, page }) {
+    const canScrollX = (delta.x < 0 && scroll.x > 0) ||
+      (delta.x > 0 && scroll.x + viewport.width < page.width)
+    const canScrollY = (delta.y < 0 && scroll.y > 0) ||
+      (delta.y > 0 && scroll.y + viewport.height < page.height)
+    return {
+      x: (!canScrollX && delta.x) ? delta.x : 0,
+      y: (!canScrollY && delta.y) ? delta.y : 0,
+      canScrollX,
+      canScrollY
     }
   },
   visualViewport () {
@@ -2752,6 +2804,150 @@ export default {
     const type = (file.type || '').toLowerCase()
     const name = (file.name || '').toLowerCase()
     return type === 'image/gif' || name.endsWith('.gif')
+  },
+  async fileHasGifMagicBytes (file) {
+    if (!file) { return false }
+    const bytes = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(new Uint8Array(reader.result || []))
+      reader.onerror = () => resolve(new Uint8Array())
+      const chunk = typeof file.slice === 'function' ? file.slice(0, 6) : file
+      reader.readAsArrayBuffer(chunk)
+    })
+    if (bytes.length < 6) { return false }
+    const text = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5])
+    return text === 'GIF87a' || text === 'GIF89a'
+  },
+  async normalizePastedImageFile (file) {
+    if (!file) { return file }
+    if (!await this.fileHasGifMagicBytes(file)) { return file }
+    const name = file.name?.toLowerCase().endsWith('.gif') ? file.name : 'pasted.gif'
+    if (file.type === 'image/gif' && name === file.name) { return file }
+    return new File([file], name, {
+      type: 'image/gif',
+      lastModified: file.lastModified
+    })
+  },
+  shouldCompressImageFile (file) {
+    if (!file) { return false }
+    if (this.isGifFile(file)) { return false }
+    const type = (file.type || this.imageFileTypeFromName(file) || '').toLowerCase()
+    if (!type.startsWith('image/')) { return false }
+    if (type === 'image/svg+xml') { return false }
+    return true
+  },
+  scaledImageSize ({ width, height, maxEdge }) {
+    const longest = Math.max(width || 0, height || 0)
+    const limit = maxEdge || consts.pastedImage.maxEdge
+    if (!longest || longest <= limit) {
+      return { width, height, scale: 1 }
+    }
+    const scale = limit / longest
+    return {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+      scale
+    }
+  },
+  canvasToBlob (canvas, type, quality) {
+    return new Promise((resolve, reject) => {
+      if (!canvas?.toBlob) {
+        reject(new Error('canvas toBlob is not available'))
+        return
+      }
+      canvas.toBlob((blob) => {
+        if (!blob || !blob.size) {
+          reject(new Error('canvas toBlob failed'))
+          return
+        }
+        resolve(blob)
+      }, type, quality)
+    })
+  },
+  async imageBitmapFromFile (file) {
+    if (typeof createImageBitmap === 'function') {
+      try {
+        return await createImageBitmap(file)
+      } catch (error) {}
+    }
+    return await new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const image = new Image()
+      image.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve(image)
+      }
+      image.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error('image load failed'))
+      }
+      image.src = url
+    })
+  },
+  async encodeCompressedCanvas (canvas, quality) {
+    const preferredType = consts.pastedImage.mimeType
+    try {
+      const blob = await this.canvasToBlob(canvas, preferredType, quality)
+      if (blob) { return { blob, type: preferredType } }
+    } catch (error) {}
+    const blob = await this.canvasToBlob(canvas, 'image/jpeg', quality)
+    return { blob, type: 'image/jpeg' }
+  },
+  async compressImageFile (file, options = {}) {
+    if (!this.shouldCompressImageFile(file)) { return file }
+    const maxEdge = options.maxEdge || consts.pastedImage.maxEdge
+    const maxBytes = options.maxBytes || consts.pastedImage.maxBytes
+    let quality = options.quality || consts.pastedImage.quality
+    const minQuality = options.minQuality || consts.pastedImage.minQuality
+    try {
+      const source = await this.imageBitmapFromFile(file)
+      const sourceWidth = source.width
+      const sourceHeight = source.height
+      let { width, height } = this.scaledImageSize({
+        width: sourceWidth,
+        height: sourceHeight,
+        maxEdge
+      })
+      const alreadySmall = file.size <= maxBytes && width === sourceWidth && height === sourceHeight
+      if (alreadySmall && (file.type === 'image/jpeg' || file.type === 'image/webp')) {
+        source.close?.()
+        return file
+      }
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      const draw = (nextWidth, nextHeight) => {
+        canvas.width = nextWidth
+        canvas.height = nextHeight
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, nextWidth, nextHeight)
+        context.drawImage(source, 0, 0, nextWidth, nextHeight)
+      }
+      draw(width, height)
+      let encoded = await this.encodeCompressedCanvas(canvas, quality)
+      while (encoded.blob.size > maxBytes && quality > minQuality) {
+        quality = Math.max(minQuality, Number((quality - 0.08).toFixed(2)))
+        encoded = await this.encodeCompressedCanvas(canvas, quality)
+      }
+      while (encoded.blob.size > maxBytes && Math.max(width, height) > 640) {
+        width = Math.max(1, Math.round(width * 0.85))
+        height = Math.max(1, Math.round(height * 0.85))
+        draw(width, height)
+        encoded = await this.encodeCompressedCanvas(canvas, quality)
+      }
+      source.close?.()
+      if (file.size && encoded.blob.size >= file.size && width === sourceWidth) {
+        return file
+      }
+      const extension = encoded.type === 'image/jpeg' ? 'jpg' : encoded.type.split('/')[1]
+      const baseName = (file.name || 'pasted.png').replace(/\.[a-z0-9]+$/i, '')
+      return new File([encoded.blob], `${baseName}.${extension}`, {
+        type: encoded.type,
+        lastModified: Date.now()
+      })
+    } catch (error) {
+      console.warn('compressImageFile', error)
+      return file
+    }
   },
   urlIsGif (url) {
     if (!url) { return }

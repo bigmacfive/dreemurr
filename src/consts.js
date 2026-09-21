@@ -28,6 +28,13 @@ export default {
   freeCardsCreatedLimit: 100,
   freeUploadSizeLimit: 5, // 5mb
   upgradedUploadSizeLimit: 256, // 256mb
+  pastedImage: {
+    maxEdge: 1920,
+    maxBytes: 600 * 1024,
+    quality: 0.82,
+    minQuality: 0.55,
+    mimeType: 'image/webp'
+  },
   emptyCard () {
     return { width: this.defaultCardWidth, height: 32 }
   },
