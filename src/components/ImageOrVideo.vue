@@ -5,7 +5,6 @@ import { useGlobalStore } from '@/stores/useGlobalStore'
 import { useStoreAction } from '@/composables/useStoreAction.js'
 
 import utils from '@/utils.js'
-import consts from '@/consts.js'
 
 const globalStore = useGlobalStore()
 
@@ -13,6 +12,7 @@ const videoElement = ref(null)
 const imageElement = ref(null)
 
 let pausedCanvas
+let gifBlobUrl
 
 onMounted(() => {
   state.imageUrl = imgproxyUrl(props.image, props.width, props.height)
@@ -38,6 +38,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', updateIsPlaying)
   pausedCanvas?.remove()
   pausedCanvas = null
+  revokeGifBlobUrl()
 })
 
 const emit = defineEmits(['loadSuccess'])
@@ -79,7 +80,7 @@ watch(() => props.image, (url) => {
 })
 watch(() => props.pendingUploadDataUrl, (url) => {
   if (url) {
-    state.imageUrl = url
+    state.imageUrl = displayImageUrl(url)
   }
 })
 watch(() => props.width, (width) => {
@@ -177,11 +178,22 @@ const updateIsPlaying = () => {
     pause()
   }
 }
+const revokeGifBlobUrl = () => {
+  if (!gifBlobUrl) { return }
+  URL.revokeObjectURL(gifBlobUrl)
+  gifBlobUrl = null
+}
+const displayImageUrl = (url) => {
+  if (!url) { return url }
+  if (url.startsWith('blob:')) { return url }
+  if (!utils.urlIsGif(url) || !url.startsWith('data:')) { return url }
+  revokeGifBlobUrl()
+  gifBlobUrl = utils.blobUrlFromDataUrl(url)
+  return gifBlobUrl || url
+}
 const shouldPauseGif = () => {
-  // desktop WKWebView often reports blur/unfocus while the window is still visible
-  if (consts.isTauri()) { return false }
-  if (globalStore.disableViewportOptimizations) { return false }
-  return true
+  // WKWebView/Safari freeze GIFs with a canvas overlay, and hasFocus() is unreliable
+  return false
 }
 const pauseGif = () => {
   // adapted from https://stackoverflow.com/a/24707088
@@ -259,7 +271,7 @@ const removeCanvasSelectedClass = () => {
 
 const imgproxyUrl = (imageUrl, width, height) => {
   if (props.pendingUploadDataUrl) {
-    return props.pendingUploadDataUrl
+    return displayImageUrl(props.pendingUploadDataUrl)
   }
   const containerBreakpoints = [100, 200, 400, 600, 800, 1200, 3000]
   const devicePixelRatio = Math.round(window.devicePixelRatio || 1)
@@ -271,7 +283,7 @@ const imgproxyUrl = (imageUrl, width, height) => {
       break
     }
   }
-  return url
+  return displayImageUrl(url)
 }
 
 // events

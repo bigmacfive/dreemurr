@@ -97,9 +97,10 @@ describe('space zoom offset', () => {
   const spaceStore = readFileSync(resolve(import.meta.dirname, 'stores/useSpaceStore.js'), 'utf8')
   const spaceZoom = readFileSync(resolve(import.meta.dirname, 'components/SpaceZoom.vue'), 'utf8')
 
-  it('clears outside space margin at 100% zoom like Kinopio', () => {
+  it('zooms around the cursor with space offset instead of document scroll', () => {
     expect(globalStore).not.toContain('spaceChromeInset')
-    expect(globalStore).toMatch(/at >100% there should be no outside space margin/)
+    expect(globalStore).toContain('computeSpaceZoomTo')
+    expect(globalStore).toContain('this.spaceZoomOffset = result.offset')
     expect(spaceStore).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
     expect(spaceZoom).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
   })
@@ -149,10 +150,11 @@ describe('pasted image compression', () => {
 })
 
 describe('gif playback', () => {
-  it('does not pause gifs when the tauri window reports blur', () => {
+  it('plays gifs from blob URLs and never freezes them on blur', () => {
     const media = readFileSync(resolve(import.meta.dirname, 'components/ImageOrVideo.vue'), 'utf8')
-    expect(media).toContain('shouldPauseGif')
-    expect(media).toMatch(/if \(consts\.isTauri\(\)\) \{ return false \}/)
+    expect(media).toContain('displayImageUrl')
+    expect(media).toContain('blobUrlFromDataUrl')
+    expect(media).toMatch(/const shouldPauseGif = \(\) => \{[\s\S]*return false/)
     expect(media).toMatch(/content-visibility visible/)
   })
 })

@@ -207,6 +207,20 @@ describe('urlIsGif', () => {
   it('ignores still images', () => {
     expect(utils.urlIsGif('data:image/png;base64,iVBORw0KGgo=')).toBe(false)
   })
+
+  it('detects gif magic inside a mislabeled data URL', () => {
+    expect(utils.urlIsGif('data:image/png;base64,R0lGODlhAQABAAAAACw=')).toBe(true)
+  })
+})
+
+describe('blobUrlFromDataUrl', () => {
+  it('turns a gif data URL into a blob URL with image/gif type', async () => {
+    const blobUrl = utils.blobUrlFromDataUrl('data:image/gif;base64,R0lGODlhAQABAAAAACw=')
+    expect(blobUrl).toMatch(/^blob:/)
+    const blob = await fetch(blobUrl).then(response => response.blob())
+    expect(blob.type).toBe('image/gif')
+    URL.revokeObjectURL(blobUrl)
+  })
 })
 
 describe('shouldCompressImageFile', () => {
@@ -273,6 +287,42 @@ describe('fileFromClipboardEvent', () => {
       }
     }
     expect(utils.fileFromClipboardEvent(event)).toBe(gif)
+  })
+
+  it('uses the gif from items when files only has a png snapshot', () => {
+    const gif = fileOf('image/gif', 'yarr.gif')
+    const png = fileOf('image/png', 'yarr.png')
+    const event = {
+      clipboardData: {
+        files: [png],
+        items: [itemOf(png), itemOf(gif)]
+      }
+    }
+    expect(utils.fileFromClipboardEvent(event)).toBe(gif)
+  })
+
+  it('replaces a png snapshot with the gif from clipboard.read', async () => {
+    const gif = fileOf('image/gif', 'pasted.gif')
+    const png = fileOf('image/png', 'still.png')
+    const previousRead = navigator.clipboard?.read
+    navigator.clipboard = {
+      read: async () => [{
+        types: ['image/gif'],
+        getType: async () => gif
+      }]
+    }
+    const result = await utils.dataFromClipboard({
+      clipboardData: {
+        files: [png],
+        items: [itemOf(png)],
+        getData: () => ''
+      }
+    })
+    expect(result.file.type).toBe('image/gif')
+    expect(result.file.name).toBe('pasted.gif')
+    if (previousRead) {
+      navigator.clipboard.read = previousRead
+    }
   })
 
   it('falls back to the first image when no gif is present', () => {
@@ -429,8 +479,7 @@ describe('applySpacePanDelta', () => {
 describe('computeSpaceZoomTo', () => {
   const zoom = {
     min: 20,
-    max: 300,
-    defaultPercent: 100
+    max: 300
   }
 
   it('grows offset when zooming out from the viewport center like Kinopio', () => {
@@ -447,7 +496,7 @@ describe('computeSpaceZoomTo', () => {
     expect(result.scroll).toEqual({ x: 0, y: 0 })
   })
 
-  it('restores offset and scroll when zooming back to 100% at the same origin', () => {
+  it('restores offset when zooming back to 100% at the same origin', () => {
     const result = utils.computeSpaceZoomTo({
       percent: 100,
       origin: { x: 400, y: 300 },
@@ -460,18 +509,38 @@ describe('computeSpaceZoomTo', () => {
     expect(result.scroll).toEqual({ x: 0, y: 0 })
   })
 
-  it('clears outside space margin at 100% even if offset is leftover', () => {
+  it('keeps the cursor point fixed when zooming in past 100%', () => {
+    const origin = { x: 400, y: 300 }
     const result = utils.computeSpaceZoomTo({
-      percent: 100,
-      origin: { x: 400, y: 300 },
-      prevZoom: 0.8,
-      offset: { x: 80, y: 40 },
-      scroll: { x: 10, y: 5 },
+      percent: 110,
+      origin,
+      prevZoom: 1,
+      offset: { x: 0, y: 0 },
+      scroll: { x: 0, y: 0 },
       ...zoom
     })
-    expect(result.offset).toEqual({ x: 0, y: 0 })
-    expect(result.scroll.x).toBeGreaterThanOrEqual(0)
-    expect(result.scroll.y).toBeGreaterThanOrEqual(0)
+    expect(result.offset.x).toBeCloseTo(-40)
+    expect(result.offset.y).toBeCloseTo(-30)
+    expect(result.offset.x + 400 * 1.1).toBeCloseTo(origin.x)
+    expect(result.offset.y + 300 * 1.1).toBeCloseTo(origin.y)
+  })
+
+  it('keeps the cursor point fixed after the canvas has been panned', () => {
+    const origin = { x: 400, y: 300 }
+    const result = utils.computeSpaceZoomTo({
+      percent: 110,
+      origin,
+      prevZoom: 1,
+      offset: { x: -200, y: 50 },
+      scroll: { x: 0, y: 0 },
+      ...zoom
+    })
+    const point = {
+      x: (origin.x - (-200)) / 1,
+      y: (origin.y - 50) / 1
+    }
+    expect(result.offset.x + point.x * 1.1).toBeCloseTo(origin.x)
+    expect(result.offset.y + point.y * 1.1).toBeCloseTo(origin.y)
   })
 })
 

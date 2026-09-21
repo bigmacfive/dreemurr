@@ -84,8 +84,7 @@ export default {
     if (!this.isKinopioUploadUrl(url)) {
       return url
     }
-    const isGif = url.includes('.gif')
-    if (isGif) { return url }
+    if (this.urlIsGif(url)) { return url }
     if (maxDimensions) {
       return `${consts.imgproxyHost}/_/rs:fit:${maxDimensions}:${maxDimensions}:0/f:webp/plain/${encodeURIComponent(url)}`
     } else {
@@ -334,42 +333,23 @@ export default {
       scroll: nextScroll
     }
   },
-  // Kinopio zoomSpaceTo: keep the space point under origin, grow offset when scroll would go negative
-  computeSpaceZoomTo ({ percent, origin, prevZoom, offset, scroll, min, max, defaultPercent }) {
+  // Keep the space point under the cursor by moving spaceZoomOffset only
+  computeSpaceZoomTo ({ percent, origin, prevZoom, offset, scroll, min, max }) {
     percent = Math.max(percent, min)
     percent = Math.min(percent, max)
     const zoom = percent / 100
     if (zoom === prevZoom) { return }
     const point = {
-      x: (scroll.x + origin.x - offset.x) / prevZoom,
-      y: (scroll.y + origin.y - offset.y) / prevZoom
-    }
-    const newOffset = { x: offset.x, y: offset.y }
-    const nextScroll = {
-      x: (point.x * zoom) + offset.x - origin.x,
-      y: (point.y * zoom) + offset.y - origin.y
-    }
-    const axes = ['x', 'y']
-    axes.forEach(axis => {
-      if (nextScroll[axis] < 0) {
-        newOffset[axis] = offset[axis] - nextScroll[axis]
-        nextScroll[axis] = 0
-      } else {
-        const delta = Math.min(offset[axis], nextScroll[axis])
-        newOffset[axis] = offset[axis] - delta
-        nextScroll[axis] = nextScroll[axis] - delta
-      }
-    })
-    if (percent >= defaultPercent) {
-      axes.forEach(axis => {
-        nextScroll[axis] = Math.max(nextScroll[axis] - newOffset[axis], 0)
-        newOffset[axis] = 0
-      })
+      x: ((scroll?.x || 0) + (origin?.x || 0) - (offset?.x || 0)) / prevZoom,
+      y: ((scroll?.y || 0) + (origin?.y || 0) - (offset?.y || 0)) / prevZoom
     }
     return {
       percent,
-      offset: newOffset,
-      scroll: nextScroll
+      offset: {
+        x: (origin?.x || 0) - point.x * zoom,
+        y: (origin?.y || 0) - point.y * zoom
+      },
+      scroll: { x: 0, y: 0 }
     }
   },
   wheelPanDelta ({ delta, scroll, viewport, page }) {
@@ -2952,15 +2932,44 @@ export default {
   urlIsGif (url) {
     if (!url) { return }
     const value = url.toLowerCase()
-    return value.includes('image/gif') || value.includes('.gif')
+    if (value.includes('image/gif') || value.includes('.gif')) { return true }
+    // GIF magic bytes in base64, even when the clipboard labeled it as png/webp
+    return value.startsWith('data:image/') && value.includes('base64,r0lgod')
+  },
+  blobUrlFromDataUrl (dataUrl) {
+    if (!dataUrl?.startsWith('data:')) { return }
+    const comma = dataUrl.indexOf(',')
+    if (comma < 0) { return }
+    const header = dataUrl.slice(0, comma)
+    const data = dataUrl.slice(comma + 1)
+    let type = header.match(/data:([^;,]+)/)?.[1] || 'application/octet-stream'
+    if (this.urlIsGif(dataUrl)) {
+      type = 'image/gif'
+    }
+    try {
+      let bytes
+      if (header.includes(';base64')) {
+        const binary = atob(data)
+        bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i)
+        }
+      } else {
+        bytes = new TextEncoder().encode(decodeURIComponent(data))
+      }
+      return URL.createObjectURL(new Blob([bytes], { type }))
+    } catch (error) {
+      console.warn('blobUrlFromDataUrl', error)
+    }
   },
   fileFromClipboardItems (items) {
     if (!items?.length) { return }
     const list = Array.from(items)
     const gifItem = list.find(item => item.type === 'image/gif')
-    if (gifItem?.getAsFile) { return gifItem.getAsFile() }
+    const gif = gifItem?.getAsFile?.()
+    if (gif) { return gif }
     const imageItem = list.find(item => item.type?.startsWith('image/'))
-    if (imageItem?.getAsFile) { return imageItem.getAsFile() }
+    return imageItem?.getAsFile?.() || undefined
   },
   fileFromClipboardFiles (files) {
     if (!files?.length) { return }
@@ -2970,12 +2979,33 @@ export default {
   fileFromClipboardEvent (event) {
     const clipboard = event?.clipboardData
     if (!clipboard) { return }
-    return this.fileFromClipboardFiles(clipboard.files) || this.fileFromClipboardItems(clipboard.items)
+    const fromItems = this.fileFromClipboardItems(clipboard.items)
+    const fromFiles = this.fileFromClipboardFiles(clipboard.files)
+    if (this.isGifFile(fromItems)) { return fromItems }
+    if (this.isGifFile(fromFiles)) { return fromFiles }
+    return fromFiles || fromItems
+  },
+  async gifFromClipboardRead () {
+    try {
+      if (!navigator.clipboard?.read) { return }
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        if (!item.types?.includes('image/gif')) { continue }
+        const blob = await item.getType('image/gif')
+        if (!blob) { continue }
+        return new File([blob], 'pasted.gif', { type: 'image/gif' })
+      }
+    } catch (error) {}
   },
   async dataFromClipboard (event) {
     let text, file
     file = this.fileFromClipboardEvent(event)
+    if (file && !this.isGifFile(file)) {
+      const gif = await this.gifFromClipboardRead()
+      if (gif) { file = gif }
+    }
     if (file) {
+      file = await this.normalizePastedImageFile(file)
       return { text, file }
     }
     const clipboard = event?.clipboardData

@@ -2248,7 +2248,6 @@ export const useGlobalStore = defineStore('global', {
     // scrolling and zoom
 
     async zoomSpaceTo ({ percent, origin }) {
-      // at >100% there should be no outside space margin
       const viewportCenter = { x: this.viewportWidth / 2, y: this.viewportHeight / 2 }
       origin = origin || viewportCenter
       const result = utils.computeSpaceZoomTo({
@@ -2258,15 +2257,14 @@ export const useGlobalStore = defineStore('global', {
         offset: this.spaceZoomOffset,
         scroll: { x: window.scrollX, y: window.scrollY },
         min: consts.spaceZoom.min,
-        max: consts.spaceZoom.max,
-        defaultPercent: consts.spaceZoom.default
+        max: consts.spaceZoom.max
       })
       if (!result) { return }
       this.spaceZoomPercent = result.percent
       this.spaceZoomOffset = result.offset
-      // scroll after the scaled space renders, otherwise scrollTo clamps to the old space size
-      await nextTick()
-      window.scrollTo(result.scroll.x, result.scroll.y)
+      if (window.scrollX || window.scrollY) {
+        window.scrollTo(0, 0)
+      }
     },
     zoomSpace ({ shouldZoomIn, shouldZoomOut, speed, origin }) {
       let percent = this.spaceZoomPercent

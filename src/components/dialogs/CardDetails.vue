@@ -1191,12 +1191,11 @@ const addSplitCards = async (newCards) => {
 
 // copy paste
 
-const updatePastedName = (event) => {
-  const files = event.clipboardData.files
-  if (files.length) {
-    const file = files[0]
-    cardStore.insertCardUploadPlaceholder(file, card.value.id)
-    uploadFile(file)
+const updatePastedName = async (event) => {
+  const data = await utils.dataFromClipboard(event)
+  if (data?.file) {
+    cardStore.insertCardUploadPlaceholder(data.file, card.value.id)
+    uploadFile(data.file)
     return
   } else {
     const text = event.clipboardData.getData('text')
