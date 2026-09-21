@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci
+      - run: npm install
       - name: Import Apple Developer Certificate
         if: matrix.name == 'macos'
         env:
