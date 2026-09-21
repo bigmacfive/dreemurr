@@ -29,6 +29,7 @@ const lockedBoxes = computed(() => boxStore.getBoxesIsLocked)
 <style lang="stylus">
 .boxes
   position absolute
-  top 0
+  inset 0
   z-index 2
+  pointer-events none
 </style>

@@ -102,6 +102,16 @@ describe('space zoom offset', () => {
     expect(spaceZoom).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
   })
 
+  it('sizes card and box layers to the space so names do not shrink-wrap to one character', () => {
+    const cards = readFileSync(resolve(import.meta.dirname, 'components/Cards.vue'), 'utf8')
+    const boxes = readFileSync(resolve(import.meta.dirname, 'components/Boxes.vue'), 'utf8')
+    const space = readFileSync(resolve(import.meta.dirname, 'views/Space.vue'), 'utf8')
+    expect(cards).toMatch(/\.cards[\s\S]*inset 0/)
+    expect(cards).toMatch(/\.cards[\s\S]*pointer-events none/)
+    expect(boxes).toMatch(/\.boxes[\s\S]*inset 0/)
+    expect(space).toMatch(/#box-infos[\s\S]*inset 0/)
+  })
+
   it('grows outside space offset when pan would scroll past the origin', () => {
     expect(globalStore).toContain('panSpaceBy')
     expect(globalStore).toContain('canGrowOffset: this.spaceZoomPercent < consts.spaceZoom.default')

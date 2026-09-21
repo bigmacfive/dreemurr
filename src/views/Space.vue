@@ -1231,6 +1231,8 @@ const shouldPrevent = computed(() => {
 #box-backgrounds,
 #box-infos
   position absolute
+  inset 0
+  pointer-events none
 #box-infos
   z-index 3
   .box-background

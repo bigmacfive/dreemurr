@@ -38,6 +38,7 @@ const lockedCards = computed(() => cardStore.getAllCards.filter(card => card.isL
 <style lang="stylus">
 .cards
   position absolute
-  top 0
+  inset 0
   z-index 2
+  pointer-events none
 </style>

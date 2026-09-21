@@ -21,6 +21,7 @@ const lists = computed(() => listStore.getAllLists)
 <style lang="stylus">
 .lists
   position absolute
-  top 0
+  inset 0
   z-index 0
+  pointer-events none
 </style>

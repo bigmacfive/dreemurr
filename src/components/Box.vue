@@ -790,7 +790,7 @@ const clearFocus = () => {
   border-radius var(--entity-radius)
   min-height var(--min-box-size)
   min-width var(--min-box-size)
-  // pointer-events none
+  pointer-events all
   // animate box expand and shrink
   &.transition
     transition width 0.2s var(--ease-out-circ),
