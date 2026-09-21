@@ -260,7 +260,22 @@ html
       height max-content
   &.is-tauri-mac
     --titlebar-height 28px
+    --window-radius 10px
     background transparent
+    isolation isolate
+    // punch transparent corners so document scroll and hit-testing stay intact
+    &::after
+      content ''
+      position fixed
+      top 0
+      right 0
+      bottom 0
+      left 0
+      z-index 2147483647
+      pointer-events none
+      border-radius var(--window-radius)
+      box-shadow 0 0 0 16px #000
+      mix-blend-mode destination-out
     body
       background transparent
     #app
@@ -280,6 +295,7 @@ html
       display flex
       align-items center
       background var(--primary-background)
+      border-radius var(--window-radius) var(--window-radius) 0 0
       pointer-events none
       user-select none
     .titlebar-controls

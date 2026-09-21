@@ -64,12 +64,15 @@ describe('tauri middle-click pan', () => {
 })
 
 describe('tauri mac window chrome', () => {
-  it('does not clip #app so top-left hit testing and document scroll stay correct', () => {
+  it('rounds the window with a viewport mask instead of clip-path', () => {
     const macBlock = mainStyl.split('&.is-tauri-mac')[1]
     expect(macBlock).toBeTruthy()
-    expect(macBlock).not.toMatch(/clip-path/)
+    expect(macBlock).not.toMatch(/clip-path inset/)
+    expect(macBlock).toMatch(/mix-blend-mode destination-out/)
+    expect(macBlock).toMatch(/--window-radius 10px/)
     const titlebarBlock = macBlock.split('.titlebar')[1]?.split('.titlebar-controls')[0] || ''
     expect(titlebarBlock).toMatch(/pointer-events none/)
+    expect(titlebarBlock).toMatch(/border-radius var\(--window-radius\) var\(--window-radius\) 0 0/)
   })
 
   it('starts window drag from left-click only so middle-click can pan', () => {
