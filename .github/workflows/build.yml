@@ -65,19 +65,27 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           args: ${{ matrix.args }}
       - name: Verify macOS code signature
         if: matrix.name == 'macos'
         run: |
           APP_PATH=$(find src-tauri/target/release/bundle/macos -name '*.app' -maxdepth 1 | head -1)
+          DMG_PATH=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' -maxdepth 1 | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "macOS .app bundle not found"
             exit 1
           fi
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           codesign -dv --verbose=2 "$APP_PATH"
-          security find-identity -v -p codesigning | grep "Developer ID Application"
+          xcrun stapler validate "$APP_PATH"
+          if [ -n "$DMG_PATH" ]; then
+            xcrun stapler validate "$DMG_PATH"
+          fi
+          spctl --assess --type exec -vv "$APP_PATH"
       - uses: actions/upload-artifact@v4
         with:
           name: dreemurr-${{ matrix.name }}
