@@ -36,4 +36,8 @@ const lockedCards = computed(() => cardStore.getAllCards.filter(card => card.isL
 </template>
 
 <style lang="stylus">
+.cards
+  position absolute
+  top 0
+  z-index 2
 </style>

@@ -25,6 +25,12 @@ const spaceName = computed(() => spaceStore.name || 'dreemurr')
 const closeWindow = () => win.close()
 const minimizeWindow = () => win.minimize()
 const toggleMaximize = () => win.toggleMaximize()
+const startWindowDrag = async (event) => {
+  if (event.button !== 0) { return }
+  try {
+    await win.startDragging()
+  } catch (error) {}
+}
 </script>
 
 <template lang="pug">
@@ -36,6 +42,6 @@ const toggleMaximize = () => win.toggleMaximize()
       span.dot
     button.titlebar-light.zoom(type="button" aria-label="Zoom" @click.stop="toggleMaximize")
       span.dot
-  .titlebar-drag(data-tauri-drag-region @dblclick="toggleMaximize")
+  .titlebar-drag(@pointerdown="startWindowDrag" @dblclick="toggleMaximize")
     span.titlebar-name {{ spaceName }}
 </template>

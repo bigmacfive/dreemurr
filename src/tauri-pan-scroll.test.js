@@ -49,6 +49,13 @@ describe('tauri middle-click pan', () => {
     expect(shortcuts).toMatch(/event\.buttons === 4/)
   })
 
+  it('lets middle-click pan start even on chrome buttons', () => {
+    expect(shortcuts).toContain('checkIsTitlebarScope')
+    expect(shortcuts).toMatch(/if \(isButtonScope && !shouldPan\) \{ return \}/)
+    expect(shortcuts).toContain('capturePanPointer')
+    expect(shortcuts).toContain('setPointerCapture')
+  })
+
   it('tracks pointer move and middle-button hold in Panning', () => {
     expect(panning).toContain("window.addEventListener('pointermove', checkIfShouldStartPanning")
     expect(panning).toContain("window.addEventListener('pointerup', checkIfShouldStartMomentum)")
@@ -56,13 +63,46 @@ describe('tauri middle-click pan', () => {
   })
 })
 
-describe('tauri mac clip-path', () => {
-  it('clips #app instead of html so document scroll still works', () => {
+describe('tauri mac window chrome', () => {
+  it('does not clip #app so top-left hit testing and document scroll stay correct', () => {
     const macBlock = mainStyl.split('&.is-tauri-mac')[1]
     expect(macBlock).toBeTruthy()
-    const beforeApp = macBlock.split('#app')[0]
-    expect(beforeApp).not.toMatch(/clip-path/)
-    expect(macBlock).toMatch(/#app[\s\S]*clip-path inset\(0 round 10px\)/)
+    expect(macBlock).not.toMatch(/clip-path/)
+    const titlebarBlock = macBlock.split('.titlebar')[1]?.split('.titlebar-controls')[0] || ''
+    expect(titlebarBlock).toMatch(/pointer-events none/)
+  })
+
+  it('starts window drag from left-click only so middle-click can pan', () => {
+    const titlebar = readFileSync(resolve(import.meta.dirname, 'components/Titlebar.vue'), 'utf8')
+    expect(titlebar).not.toContain('data-tauri-drag-region')
+    expect(titlebar).toContain('startDragging')
+    expect(titlebar).toMatch(/if \(event\.button !== 0\) \{ return \}/)
+  })
+})
+
+describe('space chrome inset', () => {
+  const globalStore = readFileSync(resolve(import.meta.dirname, 'stores/useGlobalStore.js'), 'utf8')
+  const spaceStore = readFileSync(resolve(import.meta.dirname, 'stores/useSpaceStore.js'), 'utf8')
+  const spaceZoom = readFileSync(resolve(import.meta.dirname, 'components/SpaceZoom.vue'), 'utf8')
+  const constsSource = readFileSync(resolve(import.meta.dirname, 'consts.js'), 'utf8')
+
+  it('defines a larger top-left gutter for tauri mac chrome', () => {
+    expect(constsSource).toContain('spaceChromeInset')
+    expect(constsSource).toMatch(/tauriMac:\s*\{\s*x:\s*56,\s*y:\s*124/)
+  })
+
+  it('keeps the chrome inset when zooming in past 100%', () => {
+    expect(globalStore).toContain('getSpaceChromeInset')
+    expect(globalStore).toContain('resetSpaceZoomOffset')
+    expect(globalStore).toMatch(/newOffset\[axis\] = minOffset\[axis\]/)
+    expect(globalStore).not.toMatch(/at >100% there should be no outside space margin/)
+  })
+
+  it('restores the chrome inset on space load and zoom reset', () => {
+    expect(spaceStore).toContain('resetSpaceZoomOffset')
+    expect(spaceStore).not.toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
+    expect(spaceZoom).toContain('resetSpaceZoomOffset')
+    expect(spaceZoom).not.toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
   })
 })
 

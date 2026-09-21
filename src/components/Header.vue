@@ -790,12 +790,13 @@ header
     width 100%
 
   .logo-about
-    pointer-events all
+    pointer-events none
     position relative
     display inline-block
     margin-right 6px
     margin-bottom -6px
   .logo
+    pointer-events all
     cursor pointer
     display flex
     .label-badge

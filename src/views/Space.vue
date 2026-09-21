@@ -1228,6 +1228,8 @@ const shouldPrevent = computed(() => {
 #box-backgrounds,
 #box-infos
   position absolute
+#box-infos
+  z-index 3
   .box-background
     border-radius var(--entity-radius)
     position absolute

@@ -656,7 +656,7 @@ svg.connection
   overflow visible
   min-width 5px
   min-height 5px
-  z-index calc(var(--max-z) - 200)
+  z-index 1
   path.connection-path
     pointer-events all
     cursor pointer

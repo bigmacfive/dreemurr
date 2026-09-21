@@ -39,7 +39,25 @@ let prevCursorPosition, currentCursorPosition, prevRightClickPosition, prevRight
 let unsubscribes
 let handledPointerDown = false
 let handledPointerUp = false
+let panPointerTarget
 const pointerEventOptions = { capture: true, passive: false }
+const capturePanPointer = (event) => {
+  if (event.pointerId == null || !event.target?.setPointerCapture) { return }
+  try {
+    event.target.setPointerCapture(event.pointerId)
+    panPointerTarget = event.target
+  } catch (error) {}
+}
+const releasePanPointer = (event) => {
+  const target = panPointerTarget || event?.target
+  const pointerId = event?.pointerId
+  panPointerTarget = undefined
+  if (!target?.releasePointerCapture || pointerId == null) { return }
+  try {
+    if (!target.hasPointerCapture?.(pointerId)) { return }
+    target.releasePointerCapture(pointerId)
+  } catch (error) {}
+}
 
 onMounted(() => {
   window.addEventListener('keyup', handleShortcutsOnKeyUp)
@@ -136,6 +154,9 @@ const checkIsPanScope = (event) => {
 const checkIsButtonScope = (event) => {
   const isFromButton = event.target.closest('button')
   return isFromButton
+}
+const checkIsTitlebarScope = (event) => {
+  return Boolean(event.target.closest('.titlebar'))
 }
 const isCanvasScope = (event) => {
   const fromDialog = event.target.closest('dialog')
@@ -413,8 +434,12 @@ const handleMouseDownEvents = (event) => {
   const shouldPan = (isRightClick || isMiddleClick) && isPanScope && !userDisablePan
   const position = utils.cursorPositionInPage(event)
   const isButtonScope = checkIsButtonScope(event)
+  const isTitlebarScope = checkIsTitlebarScope(event)
   const isMinimap = checkIsOnMinimap(event)
-  if (isButtonScope) { return }
+  // left-click on the custom titlebar is for window drag, not canvas tools
+  if (isTitlebarScope && !isMiddleClick && !isRightClick) { return }
+  // middle/right pan should work through header, toolbar, and traffic lights
+  if (isButtonScope && !shouldPan) { return }
   if (isRightAndLeftClick && isMinimap) {
     globalStore.shouldCancelNextMouseUpInteraction = true
     return
@@ -428,6 +453,7 @@ const handleMouseDownEvents = (event) => {
     prevRightClickPosition = utils.cursorPositionInViewport(event)
     prevRightClickTime = Date.now()
     event.preventDefault()
+    capturePanPointer(event)
     if (!isMinimap) {
       globalStore.updateCurrentUserIsPanning(true)
     }
@@ -455,6 +481,7 @@ const handleMouseMoveEvents = (event) => {
 }
 // on mouse up
 const handleMouseUpEvents = async (event) => {
+  releasePanPointer(event)
   if (globalStore.shouldCancelNextMouseUpInteraction) { return }
   const shouldPan = globalStore.currentUserIsPanning
   // handle outside window

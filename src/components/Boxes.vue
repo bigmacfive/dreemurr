@@ -30,5 +30,5 @@ const lockedBoxes = computed(() => boxStore.getBoxesIsLocked)
 .boxes
   position absolute
   top 0
-  z-index 0
+  z-index 2
 </style>

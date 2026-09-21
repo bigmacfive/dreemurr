@@ -265,7 +265,6 @@ html
       background transparent
     #app
       background transparent
-      clip-path inset(0 round 10px)
     header
       top var(--titlebar-height)
       padding 6px 10px 4px
@@ -281,7 +280,7 @@ html
       display flex
       align-items center
       background var(--primary-background)
-      pointer-events all
+      pointer-events none
       user-select none
     .titlebar-controls
       display flex
@@ -291,6 +290,7 @@ html
       height 28px
       padding 0 12px 0 16px
       flex-shrink 0
+      pointer-events auto
     .titlebar-light
       width 12px
       height 12px
@@ -365,6 +365,7 @@ html
       justify-content center
       min-width 0
       padding-right 76px
+      pointer-events auto
     .titlebar-name
       overflow hidden
       text-overflow ellipsis
