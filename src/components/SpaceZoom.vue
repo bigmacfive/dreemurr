@@ -53,7 +53,7 @@ const closeAllDialogs = () => {
 
 const resetSpaceZoom = async () => {
   await globalStore.zoomSpaceTo({ percent: defaultValue.value })
-  globalStore.resetSpaceZoomOffset()
+  globalStore.spaceZoomOffset = { x: 0, y: 0 }
 }
 const zoomOutOrInMax = () => {
   const isMin = globalStore.spaceZoomPercent === min.value

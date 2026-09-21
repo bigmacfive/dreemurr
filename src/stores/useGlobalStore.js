@@ -362,13 +362,6 @@ export const useGlobalStore = defineStore('global', {
     getIsTouchDevice () {
       return this.isTouchDevice || utils.isMobile() || consts.isSecureAppContext
     },
-    getSpaceChromeInset () {
-      if (consts.isTauri()) {
-        const isMac = /Mac/i.test(navigator.userAgent)
-        return isMac ? { ...consts.spaceChromeInset.tauriMac } : { ...consts.spaceChromeInset.tauri }
-      }
-      return { ...consts.spaceChromeInset.web }
-    },
     getZoomTransform () {
       const zoom = this.getSpaceZoomDecimal
       const offset = this.spaceZoomOffset
@@ -2271,7 +2264,6 @@ export const useGlobalStore = defineStore('global', {
       // the scroll that keeps point under the origin
       // when it would be negative, grow the outside space offset instead, so the space shifts away from the top left
       // when it is positive, shrink the offset back down first
-      const minOffset = this.getSpaceChromeInset
       const newOffset = { x: offset.x, y: offset.y }
       const scroll = {
         x: (point.x * zoom) + offset.x - origin.x,
@@ -2283,22 +2275,16 @@ export const useGlobalStore = defineStore('global', {
           newOffset[axis] = offset[axis] - scroll[axis]
           scroll[axis] = 0
         } else {
-          const shrinkable = Math.max(offset[axis] - minOffset[axis], 0)
-          const delta = Math.min(shrinkable, scroll[axis])
+          const delta = Math.min(offset[axis], scroll[axis])
           newOffset[axis] = offset[axis] - delta
           scroll[axis] = scroll[axis] - delta
         }
       })
-      // keep chrome inset at every zoom; drop only the extra zoom-out margin at ≥100%
+      // at >100% there should be no outside space margin
       if (percent >= consts.spaceZoom.default) {
         axes.forEach(axis => {
-          const extra = Math.max(newOffset[axis] - minOffset[axis], 0)
-          scroll[axis] = Math.max(scroll[axis] - extra, 0)
-          newOffset[axis] = minOffset[axis]
-        })
-      } else {
-        axes.forEach(axis => {
-          newOffset[axis] = Math.max(newOffset[axis], minOffset[axis])
+          scroll[axis] = Math.max(scroll[axis] - newOffset[axis], 0)
+          newOffset[axis] = 0
         })
       }
       this.spaceZoomPercent = percent
@@ -2306,9 +2292,6 @@ export const useGlobalStore = defineStore('global', {
       // scroll after the scaled space renders, otherwise scrollTo clamps to the old space size
       await nextTick()
       window.scrollTo(scroll.x, scroll.y)
-    },
-    resetSpaceZoomOffset () {
-      this.spaceZoomOffset = this.getSpaceChromeInset
     },
     zoomSpace ({ shouldZoomIn, shouldZoomOut, speed, origin }) {
       let percent = this.spaceZoomPercent

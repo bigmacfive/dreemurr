@@ -18,15 +18,19 @@ describe('tauri two-finger trackpad pan', () => {
   })
 
   it('does not trap the canvas in an overflow-hidden desktop frame', () => {
-    const frameBlock = mainStyl.split('.window-frame.desktop')[1]?.split('.titlebar')[0] || ''
+    const frameBlock = mainStyl.split('.window-frame.desktop')[1]?.split('&.is-tauri-mac')[0] || ''
     expect(frameBlock).not.toMatch(/overflow hidden/)
     expect(frameBlock).not.toMatch(/inset 0/)
   })
 
   it('lets the desktop frame grow with page size', () => {
-    const frameBlock = mainStyl.split('.window-frame.desktop')[1]?.split('.titlebar')[0] || ''
+    const frameBlock = mainStyl.split('.window-frame.desktop')[1]?.split('&.is-tauri-mac')[0] || ''
     expect(frameBlock).toMatch(/width max-content/)
     expect(frameBlock).toMatch(/height max-content/)
+  })
+
+  it('does not flip pinch zoom on tauri from webkitDirectionInvertedFromDevice', () => {
+    expect(scrollHandler).toMatch(/invertZoom = consts\.isTauri\(\) \? false : event\.webkitDirectionInvertedFromDevice/)
   })
 
   it('only preventDefault on wheel when pinching/zooming with meta', () => {
@@ -64,12 +68,15 @@ describe('tauri middle-click pan', () => {
 })
 
 describe('tauri mac window chrome', () => {
-  it('rounds the window with a viewport mask instead of clip-path', () => {
+  it('uses the native window radius instead of a clip-path or punch mask', () => {
     const macBlock = mainStyl.split('&.is-tauri-mac')[1]
     expect(macBlock).toBeTruthy()
     expect(macBlock).not.toMatch(/clip-path inset/)
-    expect(macBlock).toMatch(/mix-blend-mode destination-out/)
+    expect(macBlock).not.toMatch(/mix-blend-mode destination-out/)
     expect(macBlock).toMatch(/--window-radius 10px/)
+    expect(macBlock).toMatch(/\.space[\s\S]*border-radius calc\(var\(--window-radius\) \/ var\(--space-zoom/)
+    const space = readFileSync(resolve(import.meta.dirname, 'views/Space.vue'), 'utf8')
+    expect(space).toContain("'--space-zoom': spaceZoomDecimal.value")
     const titlebarBlock = macBlock.split('.titlebar')[1]?.split('.titlebar-controls')[0] || ''
     expect(titlebarBlock).toMatch(/pointer-events none/)
     expect(titlebarBlock).toMatch(/border-radius var\(--window-radius\) var\(--window-radius\) 0 0/)
@@ -83,29 +90,25 @@ describe('tauri mac window chrome', () => {
   })
 })
 
-describe('space chrome inset', () => {
+describe('space zoom offset', () => {
   const globalStore = readFileSync(resolve(import.meta.dirname, 'stores/useGlobalStore.js'), 'utf8')
   const spaceStore = readFileSync(resolve(import.meta.dirname, 'stores/useSpaceStore.js'), 'utf8')
   const spaceZoom = readFileSync(resolve(import.meta.dirname, 'components/SpaceZoom.vue'), 'utf8')
-  const constsSource = readFileSync(resolve(import.meta.dirname, 'consts.js'), 'utf8')
 
-  it('defines a larger top-left gutter for tauri mac chrome', () => {
-    expect(constsSource).toContain('spaceChromeInset')
-    expect(constsSource).toMatch(/tauriMac:\s*\{\s*x:\s*56,\s*y:\s*124/)
+  it('clears outside space margin at 100% zoom like Kinopio', () => {
+    expect(globalStore).not.toContain('spaceChromeInset')
+    expect(globalStore).toMatch(/at >100% there should be no outside space margin/)
+    expect(spaceStore).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
+    expect(spaceZoom).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
   })
+})
 
-  it('keeps the chrome inset when zooming in past 100%', () => {
-    expect(globalStore).toContain('getSpaceChromeInset')
-    expect(globalStore).toContain('resetSpaceZoomOffset')
-    expect(globalStore).toMatch(/newOffset\[axis\] = minOffset\[axis\]/)
-    expect(globalStore).not.toMatch(/at >100% there should be no outside space margin/)
-  })
-
-  it('restores the chrome inset on space load and zoom reset', () => {
-    expect(spaceStore).toContain('resetSpaceZoomOffset')
-    expect(spaceStore).not.toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
-    expect(spaceZoom).toContain('resetSpaceZoomOffset')
-    expect(spaceZoom).not.toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
+describe('overlay scrollbars', () => {
+  it('keeps document scrollbars overlay so drawing a box does not steal viewport', () => {
+    expect(mainStyl).toMatch(/overflow overlay/)
+    expect(mainStyl).toMatch(/scrollbar-gutter auto/)
+    expect(mainStyl).toMatch(/--scrollbar-size 6px/)
+    expect(mainStyl).not.toMatch(/border 2px solid transparent/)
   })
 })
 

@@ -315,7 +315,8 @@ const styles = computed(() => {
   return {
     width: `${pageWidth.value}px`,
     height: `${pageHeight.value}px`,
-    transform: globalStore.getZoomTransform
+    transform: globalStore.getZoomTransform,
+    '--space-zoom': spaceZoomDecimal.value
   }
 })
 

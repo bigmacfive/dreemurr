@@ -32,7 +32,7 @@
   --brand #F3A36C
   --brand-hover #ee9258
   --brand-active #e88345
-  --scrollbar-size 11px
+  --scrollbar-size 6px
   --scrollbar-thumb var(--primary-border)
   --scrollbar-thumb-hover var(--brand)
   --scrollbar-thumb-active var(--brand-active)
@@ -214,18 +214,14 @@
 ::-webkit-scrollbar
   width var(--scrollbar-size)
   height var(--scrollbar-size)
+  background transparent
 
 ::-webkit-scrollbar-track
-  background var(--scrollbar-track)
-  border-radius 999px
+  background transparent
 
 ::-webkit-scrollbar-thumb
   background-color var(--scrollbar-thumb)
-  background-clip padding-box
-  border 2px solid transparent
   border-radius 999px
-  min-width 28px
-  min-height 28px
 
 ::-webkit-scrollbar-thumb:hover
   background-color var(--scrollbar-thumb-hover)
@@ -235,6 +231,8 @@
 
 ::-webkit-scrollbar-corner
   background transparent
+  width 0
+  height 0
 
 .window-frame:not(.desktop)
   display contents
@@ -243,10 +241,14 @@ html
   background transparent
   font-family var(--sans-serif-font)
   letter-spacing -0.03em
+  overflow auto
+  overflow overlay
+  scrollbar-gutter auto
   &.is-tauri
     background var(--primary-background)
     body
       overflow auto
+      overflow overlay
     #app
       min-width 100%
       min-height 100%
@@ -261,25 +263,14 @@ html
   &.is-tauri-mac
     --titlebar-height 28px
     --window-radius 10px
-    background transparent
-    isolation isolate
-    // punch transparent corners so document scroll and hit-testing stay intact
-    &::after
-      content ''
-      position fixed
-      top 0
-      right 0
-      bottom 0
-      left 0
-      z-index 2147483647
-      pointer-events none
-      border-radius var(--window-radius)
-      box-shadow 0 0 0 16px #000
-      mix-blend-mode destination-out
+    background var(--primary-background)
     body
-      background transparent
+      background var(--primary-background)
     #app
-      background transparent
+      background var(--primary-background)
+    .space
+      border-radius calc(var(--window-radius) / var(--space-zoom, 1))
+      overflow hidden
     header
       top var(--titlebar-height)
       padding 6px 10px 4px
@@ -417,6 +408,7 @@ body
   -webkit-user-select none
   user-select none
   overflow auto // enables window.scrollBy support
+  overflow overlay
   font-family var(--sans-serif-font)
   letter-spacing -0.03em
 

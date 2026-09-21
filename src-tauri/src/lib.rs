@@ -105,6 +105,50 @@ fn read_dreem_file(app: tauri::AppHandle, filename: String) -> Result<String, St
   fs::read_to_string(path).map_err(|error| error.to_string())
 }
 
+#[cfg(target_os = "macos")]
+fn apply_macos_window_chrome(window: &tauri::WebviewWindow) {
+  use objc2::msg_send;
+  use objc2::runtime::AnyObject;
+  use tauri::window::{Effect, EffectsBuilder};
+
+  let _ = window.set_effects(
+    EffectsBuilder::new()
+      .effects([Effect::WindowBackground])
+      .radius(10.0)
+      .build(),
+  );
+  let _ = window.set_shadow(true);
+
+  let Ok(ns_window) = window.ns_window() else { return };
+  let ns_window = ns_window as *mut AnyObject;
+  if ns_window.is_null() { return }
+  unsafe {
+    let content_view: *mut AnyObject = msg_send![ns_window, contentView];
+    clip_view_corners(content_view, 10.0);
+    if !content_view.is_null() {
+      let subviews: *mut AnyObject = msg_send![content_view, subviews];
+      if !subviews.is_null() {
+        let count: usize = msg_send![subviews, count];
+        for index in 0..count {
+          let child: *mut AnyObject = msg_send![subviews, objectAtIndex: index];
+          clip_view_corners(child, 10.0);
+        }
+      }
+    }
+  }
+}
+
+#[cfg(target_os = "macos")]
+unsafe fn clip_view_corners(view: *mut objc2::runtime::AnyObject, radius: f64) {
+  use objc2::msg_send;
+  if view.is_null() { return }
+  let _: () = msg_send![view, setWantsLayer: true];
+  let layer: *mut objc2::runtime::AnyObject = msg_send![view, layer];
+  if layer.is_null() { return }
+  let _: () = msg_send![layer, setCornerRadius: radius];
+  let _: () = msg_send![layer, setMasksToBounds: true];
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -124,19 +168,13 @@ pub fn run() {
       }
       if let Some(window) = app.get_webview_window("main") {
         #[cfg(target_os = "macos")]
-        {
-          use tauri::window::{Effect, EffectsBuilder};
-          let _ = window.set_effects(
-            EffectsBuilder::new()
-              .effects([Effect::WindowBackground])
-              .radius(10.0)
-              .build(),
-          );
-        }
+        apply_macos_window_chrome(&window);
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.center();
         let _ = window.set_focus();
+        #[cfg(target_os = "macos")]
+        apply_macos_window_chrome(&window);
       }
       Ok(())
     })

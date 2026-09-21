@@ -13,12 +13,6 @@ export default {
     min: 20,
     default: 100
   },
-  // screen-pixel gutter so canvas origin sits below titlebar/header/toolbar at every zoom
-  spaceChromeInset: {
-    tauriMac: { x: 56, y: 124 },
-    tauri: { x: 56, y: 100 },
-    web: { x: 48, y: 88 }
-  },
   viewportObserverMaxRootMarginPercent: 50,
   spaceBetweenCards: 12,
   cardCharacterLimit: 4000,

@@ -138,7 +138,7 @@ const dragPlayheadWheel = (event) => {
   speed = Math.min(maxSpeed, speed)
   let shouldZoomIn = deltaY < 0
   let shouldZoomOut = deltaY > 0
-  let invertZoom = event.webkitDirectionInvertedFromDevice
+  let invertZoom = consts.isTauri() ? false : event.webkitDirectionInvertedFromDevice
   if (userStore.shouldInvertZoom) {
     invertZoom = !invertZoom
   }

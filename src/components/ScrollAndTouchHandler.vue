@@ -65,7 +65,8 @@ const handleMouseWheelEvents = (event) => {
   const deltaY = event.deltaY
   let shouldZoomIn = deltaY < 0
   let shouldZoomOut = deltaY > 0
-  let invertZoom = event.webkitDirectionInvertedFromDevice
+  // WKWebView reports inverted-from-device even when pinch zoom already matches the web app
+  let invertZoom = consts.isTauri() ? false : event.webkitDirectionInvertedFromDevice
   if (userStore.shouldInvertZoom) {
     invertZoom = !invertZoom
   }
