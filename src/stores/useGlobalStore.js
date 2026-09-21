@@ -694,8 +694,8 @@ export const useGlobalStore = defineStore('global', {
     },
     updateViewportSizes () {
       const viewport = utils.visualViewport()
-      this.viewportWidth = Math.round(viewport.width)
-      this.viewportHeight = Math.round(viewport.height)
+      this.viewportWidth = Math.round(viewport.width || window.innerWidth || 0)
+      this.viewportHeight = Math.round(viewport.height || window.innerHeight || 0)
     },
 
     scrollElementIntoView ({ element, behavior = 'smooth', positionIsCenter, positionIsTop }) {
@@ -2303,6 +2303,27 @@ export const useGlobalStore = defineStore('global', {
         return
       }
       return this.zoomSpaceTo({ percent, origin })
+    },
+    panSpaceBy (delta) {
+      if (!delta) { return { offsetDelta: { x: 0, y: 0 } } }
+      const prevOffset = this.spaceZoomOffset
+      const result = utils.applySpacePanDelta({
+        offset: prevOffset,
+        scroll: { x: window.scrollX, y: window.scrollY },
+        delta,
+        canGrowOffset: this.spaceZoomPercent < consts.spaceZoom.default
+      })
+      const offsetDelta = {
+        x: result.offset.x - prevOffset.x,
+        y: result.offset.y - prevOffset.y
+      }
+      if (offsetDelta.x || offsetDelta.y) {
+        this.spaceZoomOffset = result.offset
+      }
+      if (result.scroll.x !== window.scrollX || result.scroll.y !== window.scrollY) {
+        window.scrollTo(result.scroll.x, result.scroll.y)
+      }
+      return { offsetDelta }
     },
 
     // toolbar mode

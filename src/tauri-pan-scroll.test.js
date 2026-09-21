@@ -38,10 +38,10 @@ describe('tauri two-finger trackpad pan', () => {
     expect(scrollHandler).toMatch(/if \(!isMeta\) \{[\s\S]*?return\s*\}[\s\S]*?event\.preventDefault\(\)/)
   })
 
-  it('falls back to window.scrollBy on tauri when native wheel does not move', () => {
+  it('falls back to panSpaceBy on tauri when native wheel does not move', () => {
     expect(scrollHandler).toContain('applyTauriWheelPan')
     expect(scrollHandler).toMatch(/if \(!consts\.isTauri\(\)\) \{ return \}/)
-    expect(scrollHandler).toContain('window.scrollBy(deltaX, deltaY)')
+    expect(scrollHandler).toContain('globalStore.panSpaceBy({ x: deltaX, y: deltaY })')
   })
 })
 
@@ -100,6 +100,13 @@ describe('space zoom offset', () => {
     expect(globalStore).toMatch(/at >100% there should be no outside space margin/)
     expect(spaceStore).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
     expect(spaceZoom).toMatch(/spaceZoomOffset = \{ x: 0, y: 0 \}/)
+  })
+
+  it('grows outside space offset when pan would scroll past the origin', () => {
+    expect(globalStore).toContain('panSpaceBy')
+    expect(globalStore).toContain('canGrowOffset: this.spaceZoomPercent < consts.spaceZoom.default')
+    expect(panning).toContain('globalStore.panSpaceBy(panningDelta)')
+    expect(panning).toContain('startPosition.x += offsetDelta.x')
   })
 })
 

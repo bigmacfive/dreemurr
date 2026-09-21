@@ -317,3 +317,49 @@ describe('isCompositionKeyboardEvent', () => {
     vi.restoreAllMocks()
   })
 })
+
+describe('applySpacePanDelta', () => {
+  it('grows outside space offset when scroll would go past the origin', () => {
+    const result = utils.applySpacePanDelta({
+      offset: { x: 0, y: 0 },
+      scroll: { x: 0, y: 0 },
+      delta: { x: -40, y: -25 },
+      canGrowOffset: true
+    })
+    expect(result.offset).toEqual({ x: 40, y: 25 })
+    expect(result.scroll).toEqual({ x: 0, y: 0 })
+  })
+
+  it('uses existing scroll before growing offset', () => {
+    const result = utils.applySpacePanDelta({
+      offset: { x: 0, y: 0 },
+      scroll: { x: 10, y: 8 },
+      delta: { x: -40, y: -25 },
+      canGrowOffset: true
+    })
+    expect(result.offset).toEqual({ x: 30, y: 17 })
+    expect(result.scroll).toEqual({ x: 0, y: 0 })
+  })
+
+  it('shrinks offset before scrolling the other way', () => {
+    const result = utils.applySpacePanDelta({
+      offset: { x: 20, y: 10 },
+      scroll: { x: 0, y: 0 },
+      delta: { x: 50, y: 4 },
+      canGrowOffset: true
+    })
+    expect(result.offset).toEqual({ x: 0, y: 6 })
+    expect(result.scroll).toEqual({ x: 30, y: 0 })
+  })
+
+  it('does not grow offset at 100% zoom', () => {
+    const result = utils.applySpacePanDelta({
+      offset: { x: 0, y: 0 },
+      scroll: { x: 0, y: 0 },
+      delta: { x: -40, y: -25 },
+      canGrowOffset: false
+    })
+    expect(result.offset).toEqual({ x: 0, y: 0 })
+    expect(result.scroll).toEqual({ x: 0, y: 0 })
+  })
+})

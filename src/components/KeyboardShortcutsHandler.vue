@@ -42,10 +42,12 @@ let handledPointerUp = false
 let panPointerTarget
 const pointerEventOptions = { capture: true, passive: false }
 const capturePanPointer = (event) => {
-  if (event.pointerId == null || !event.target?.setPointerCapture) { return }
+  if (event.pointerId == null) { return }
+  const target = document.documentElement
+  if (!target?.setPointerCapture) { return }
   try {
-    event.target.setPointerCapture(event.pointerId)
-    panPointerTarget = event.target
+    target.setPointerCapture(event.pointerId)
+    panPointerTarget = target
   } catch (error) {}
 }
 const releasePanPointer = (event) => {

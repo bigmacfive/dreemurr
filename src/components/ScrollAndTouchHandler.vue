@@ -88,7 +88,7 @@ const applyTauriWheelPan = (event) => {
   const deltaY = event.deltaY
   requestAnimationFrame(() => {
     if (window.scrollX === prevX && window.scrollY === prevY) {
-      window.scrollBy(deltaX, deltaY)
+      globalStore.panSpaceBy({ x: deltaX, y: deltaY })
     }
   })
 }

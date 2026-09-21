@@ -149,7 +149,11 @@ const updatePanningPosition = (event) => {
 const panningFrame = () => {
   // scroll frame
   if (shouldPanNextFrame && panningDelta) {
-    window.scrollBy(panningDelta.x, panningDelta.y, 'instant')
+    const { offsetDelta } = globalStore.panSpaceBy(panningDelta)
+    if (startPosition && offsetDelta) {
+      startPosition.x += offsetDelta.x
+      startPosition.y += offsetDelta.y
+    }
     updatecurrentScrollByDelta(panningDelta)
     shouldPanNextFrame = false
   } else if (velocity) {
@@ -182,7 +186,7 @@ const startMomentum = () => {
     // scroll frame
     velocity.x *= momentumDeceleration
     velocity.y *= momentumDeceleration
-    window.scrollBy(velocity.x, velocity.y, 'instant')
+    globalStore.panSpaceBy(velocity)
     updatecurrentScrollByDelta(velocity)
     momentumTimer = window.requestAnimationFrame(momentumFrame)
   }

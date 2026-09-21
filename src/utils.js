@@ -303,13 +303,44 @@ export default {
     }
     return { x, y, shouldIgnoreZoom, transformOriginIsTopRight, zoom }
   },
+  applySpacePanDelta ({ offset, scroll, delta, canGrowOffset }) {
+    const nextOffset = {
+      x: offset?.x || 0,
+      y: offset?.y || 0
+    }
+    const nextScroll = {
+      x: Math.max(scroll?.x || 0, 0),
+      y: Math.max(scroll?.y || 0, 0)
+    }
+    ;['x', 'y'].forEach(axis => {
+      const move = delta?.[axis] || 0
+      if (move < 0) {
+        const fromScroll = Math.min(nextScroll[axis], -move)
+        nextScroll[axis] -= fromScroll
+        const remaining = move + fromScroll
+        if (remaining < 0 && canGrowOffset) {
+          nextOffset[axis] -= remaining
+        }
+      } else if (move > 0) {
+        const fromOffset = Math.min(nextOffset[axis], move)
+        nextOffset[axis] -= fromOffset
+        nextScroll[axis] += move - fromOffset
+      }
+    })
+    return {
+      offset: nextOffset,
+      scroll: nextScroll
+    }
+  },
   visualViewport () {
     const visualViewport = window.visualViewport
+    const fallbackWidth = window.innerWidth || document.documentElement.clientWidth || 0
+    const fallbackHeight = window.innerHeight || document.documentElement.clientHeight || 0
     let viewport
     if (visualViewport) {
       viewport = {
-        width: visualViewport.width,
-        height: visualViewport.height,
+        width: visualViewport.width || fallbackWidth,
+        height: visualViewport.height || fallbackHeight,
         scale: visualViewport.scale,
         offsetLeft: Math.max(visualViewport.offsetLeft, 0),
         offsetTop: Math.max(visualViewport.offsetTop, 0),
@@ -319,8 +350,8 @@ export default {
     } else {
       // firefox fallback, doesn't support pinch zooming
       viewport = {
-        width: document.documentElement.clientWidth,
-        height: document.documentElement.clientHeight,
+        width: document.documentElement.clientWidth || fallbackWidth,
+        height: document.documentElement.clientHeight || fallbackHeight,
         scale: document.documentElement.clientWidth / window.innerWidth,
         offsetLeft: 0,
         offsetTop: 0,

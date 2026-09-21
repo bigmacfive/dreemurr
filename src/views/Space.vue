@@ -149,6 +149,7 @@ onMounted(async () => {
   window.addEventListener('touchend', updateViewportSizes)
   window.addEventListener('gesturecancel', updateViewportSizes)
   window.addEventListener('resize', updateViewportSizes)
+  window.visualViewport?.addEventListener('resize', updateViewportSizes)
   updateViewportSizes()
   // when a card is added through Add.vue in a sharesheet with the space open behind it
   window.addEventListener('message', addCardFromOutsideAppContext)
@@ -212,6 +213,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('touchend', updateViewportSizes)
   window.removeEventListener('gesturecancel', updateViewportSizes)
   window.removeEventListener('resize', updateViewportSizes)
+  window.visualViewport?.removeEventListener('resize', updateViewportSizes)
   clearInterval(processQueueIntervalTimer)
   clearInterval(hourlyTasks)
   updateViewportObservers.cancel()
